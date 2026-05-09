@@ -12,6 +12,11 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/register")
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
+    
+    errors = validate_register_data(user_data)
+    if errors:
+        raise HTTPException(status_code=400, detail={"detail": errors})
+    
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     
     if existing_user:
@@ -52,3 +57,17 @@ def get_me(current_user: User = Depends(get_current_user)):
         "first_name": current_user.first_name,
         "last_name": current_user.last_name,
     }
+    
+def validate_register_data(user_data: UserRegister):
+    errors = []
+    
+    if not user_data.email:
+        errors.append("Missing email")
+    if not user_data.password:
+        errors.append("Missing password")
+    if not user_data.first_name:
+        errors.append("Missing first name")
+    if not user_data.last_name:
+        errors.append("Missing last name")
+
+    return errors

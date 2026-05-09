@@ -17,3 +17,7 @@ class CardResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class CardCreateResponse(BaseModel):
+    message: str
+    card: CardResponse

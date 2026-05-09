@@ -16,3 +16,7 @@ class ProfileResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class ProfileCreateResponse(BaseModel):
+    message: str
+    profile: ProfileResponse

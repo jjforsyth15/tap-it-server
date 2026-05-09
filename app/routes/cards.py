@@ -5,12 +5,15 @@ from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardCreate, CardResponse
+from app.schemas.card import CardCreate, CardResponse, CardCreateResponse
 from uuid import UUID
 from app.models.profile import Profile
 from uuid import uuid4
 import string
 import random
+import os
+
+url = os.getenv("CURRENT_URL")
 
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -23,10 +26,10 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Card not found")
     
     if card.card_status == "inactive":
-        return RedirectResponse(url=f"/login?next=/cards/{card_code}")
+        return RedirectResponse(url=f"{url}/login?next=/cards/{card_code}")
     
     if card.card_status == "active":
-        return RedirectResponse(url=f"/profile/{card.profile_id}")
+        return RedirectResponse(url=f"{url}/profile/{card.profile_id}")
     
     if card.card_status in ["deactivated", "lost", "disabled"]:
         raise HTTPException(status_code=403, detail="Card is not available")
@@ -34,12 +37,16 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
     raise HTTPException(status_code=400, detail="Invalid card status")
 
 
-@router.post("/create_card")
+@router.post("/create_card", response_model=CardCreateResponse)
 def create_card(card_data: CardCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     
-    profile = db.query(Profile.filter(
-        profile.profile_id == card_data.profile_id,
-    )).first()
+    errors = validate_card_data(card_data)
+    if errors:
+        raise HTTPException(status_code=400, detail={"detail": errors})
+    
+    profile = db.query(Profile).filter(
+        Profile.profile_id == card_data.profile_id,
+    ).first()
     
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -54,7 +61,7 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
         profile_id=card_data.profile_id,
         card_name=card_data.card_name,
         card_code=card_code,
-        pointing_url=f"/cards/{card_code}",
+        pointing_url=f"{url}/cards/{card_code}",
         card_status=CardStatus.inactive
     )
     
@@ -62,7 +69,10 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
     db.commit()
     db.refresh(new_card)
     
-    return {"message": "Card created successfully"}
+    return {
+        "message": "Card created successfully", 
+        "card": new_card
+        }
 
 
 @router.get("/profile/{profile_id}", response_model=list[CardResponse])
@@ -83,3 +93,17 @@ def generate_card_code(length=8):
     return ''.join(
         random.choices(string.ascii_uppercase + string.digits, k=length)
     )
+    
+def validate_card_data(card_data: CardCreate):
+    errors = []
+    
+    if not card_data.profile_id:
+        errors.append("Missing profile id")
+        
+    if not card_data.card_name:
+        errors.append("Missing card name")
+        
+    if len(card_data.card_name) > 50:
+        errors.append("Card name must be 50 characters or less")
+    
+    return errors
