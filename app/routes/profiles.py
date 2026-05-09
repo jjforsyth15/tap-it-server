@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.profile import Profile
+from app.models.card import Card
 from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileResponse
 from app.core.dependencies import get_current_user
 from uuid import uuid4
@@ -46,6 +47,26 @@ def get_my_profiles(
     
     return profiles
 
+
+@router.patch("/{profile_id}/deactivate")
+def deactivate_profile(profile_id: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    if profile.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not have permission to deactivate this profile")
+    
+    profile.is_active = False
+    
+    db.query(Card).filter(Card.profile_id == profile_id).update(
+        {"card_status": "deactivated"}
+    )
+    
+    db.commit()
+    
+    return {"message": "Profile and associated cards deactivated successfully"}
 
 def validate_profile_data(profile_data: ProfileCreate):
     errors = []

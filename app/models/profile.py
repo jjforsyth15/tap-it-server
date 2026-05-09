@@ -36,6 +36,12 @@ class Profile(Base):
         server_default=func.now(),
         nullable=False
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
     
     user = relationship("User", back_populates="profiles")
     cards = relationship("Card", back_populates="profile", cascade="all, delete-orphan")
