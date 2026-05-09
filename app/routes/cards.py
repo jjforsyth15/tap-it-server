@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardCreate, CardResponse, CardCreateResponse
+from app.schemas.card import CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate
 from uuid import UUID
 from app.models.profile import Profile
 from uuid import uuid4
@@ -118,7 +118,7 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
     
     return {
         "message": "Card activated successfully",
-        "card_name:": card.card_name,
+        "card_name": card.card_name,
         "card_status": card.card_status,
         }
     
@@ -152,6 +152,43 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
         "card_name": card.card_name,
         "new_profile_name": new_profile.profile_name,
         }
+
+
+@router.patch("/{card_id}/update_status")
+def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    valid_statuses = [
+        "inactive", 
+        "active", 
+        "deactivated",
+        "lost",
+        "disabled"
+    ]
+    
+    card = db.query(Card).filter(Card.card_id == card_id).first()
+    
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    profile = db.query(Profile).filter(Profile.profile_id == card.profile_id).first()
+    
+    if profile.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not have permission to update the status of this card")
+    
+    if status_data.card_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Invalid card status")
+    
+    card.card_status = status_data.card_status
+    card.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(card)
+    
+    return {
+        "message": "Card status updated successfully",
+        "card_name": card.card_name,
+        "card_status": card.card_status,
+        }
+    
 
 
 def generate_card_code(db: Session, length=8):

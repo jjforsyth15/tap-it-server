@@ -5,7 +5,6 @@ class CardCreate(BaseModel):
     profile_id: UUID
     card_name: str
     
-
 class CardResponse(BaseModel):
     card_id: UUID
     profile_id: UUID
@@ -21,3 +20,7 @@ class CardResponse(BaseModel):
 class CardCreateResponse(BaseModel):
     message: str
     card: CardResponse
+    
+    
+class CardStatusUpdate(BaseModel):
+    card_status: str
