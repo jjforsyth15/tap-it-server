@@ -5,7 +5,8 @@ from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardCreate
+from app.schemas.card import CardCreate, CardResponse
+from uuid import UUID
 from app.models.profile import Profile
 from uuid import uuid4
 import string
@@ -63,6 +64,20 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
     
     return {"message": "Card created successfully"}
 
+
+@router.get("/profile/{profile_id}", response_model=list[CardResponse])
+def get_cards_by_profile(
+    profile_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    ):
+        profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
+        
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        if profile.user_id != current_user.user_id:
+            raise HTTPException(status_code=403, detail="You do not have permission to view cards for this profile")
+        
+        return db.query(Card).filter(Card.profile_id == profile_id).all()
 
 def generate_card_code(length=8):
     return ''.join(
