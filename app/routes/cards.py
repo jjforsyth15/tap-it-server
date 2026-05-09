@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.card import CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate
 from uuid import UUID
 from app.models.profile import Profile
+from app.models.card_tap import CardTap
 from uuid import uuid4
 import string
 import random
@@ -30,6 +31,10 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
         return RedirectResponse(url=f"{url}/login?next=/activate-card/{card_code}")
     
     if card.card_status == "active":
+        new_tap = CardTap(card_id=card.card_id)
+        db.add(new_tap)
+        db.commit()
+
         return RedirectResponse(url=f"{url}/profile/{card.profile_id}")
     
     if card.card_status in ["deactivated", "lost", "disabled"]:
