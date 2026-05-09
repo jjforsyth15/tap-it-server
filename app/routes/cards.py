@@ -121,6 +121,37 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
         "card_name:": card.card_name,
         "card_status": card.card_status,
         }
+    
+    
+@router.patch("/{card_id}/profile/{profile_id}")
+def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    card = db.query(Card).filter(Card.card_id == card_id).first()
+    
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    new_profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
+    
+    if not new_profile:
+        raise HTTPException(status_code=404, detail="New profile not found")
+    
+    if profile_id != current_user.user_id or new_profile.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not have permission to assign this card to the new profile")
+    
+    if new_profile.is_active == False:
+        raise HTTPException(status_code=403, detail="Cannot assign card to an inactive profile")
+    
+    card.profile_id = profile_id
+    card.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(card)
+    
+    return {
+        "message": "Card profile updated successfully",
+        "card_name": card.card_name,
+        "new_profile_name": new_profile.profile_name,
+        }
 
 
 def generate_card_code(db: Session, length=8):
