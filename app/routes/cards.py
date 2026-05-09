@@ -55,7 +55,7 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
     if profile.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="You do not have permission to create a card for this profile")
 
-    card_code = generate_card_code()
+    card_code = generate_card_code(db)
     
     new_card = Card(
         card_id=str(uuid4()),
@@ -63,7 +63,7 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
         card_name=card_data.card_name,
         card_code=card_code,
         pointing_url=f"{url}/cards/{card_code}",
-        card_status=CardStatus.inactive
+        card_status="inactive"
     )
     
     db.add(new_card)
@@ -123,10 +123,16 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
         }
 
 
-def generate_card_code(length=8):
-    return ''.join(
-        random.choices(string.ascii_uppercase + string.digits, k=length)
-    )
+def generate_card_code(db: Session, length=8):
+    characters = string.ascii_uppercase + string.digits
+    
+    while True:
+        code = ''.join(random.choices(characters, k=length))
+        
+        existing_card = db.query(Card).filter(Card.card_code == code).first()
+        
+        if not existing_card:
+            return code
     
 def validate_card_data(card_data: CardCreate):
     errors = []
