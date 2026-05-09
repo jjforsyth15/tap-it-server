@@ -12,6 +12,7 @@ from uuid import uuid4
 import string
 import random
 import os
+from datetime import datetime
 
 url = os.getenv("CURRENT_URL")
 
@@ -88,6 +89,39 @@ def get_cards_by_profile(
             raise HTTPException(status_code=403, detail="You do not have permission to view cards for this profile")
         
         return db.query(Card).filter(Card.profile_id == profile_id).all()
+    
+    
+@router.patch("/{card_code}/activate")
+def activate_card(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    card = db.query(Card).filter(Card.card_code == card_code).first()
+    
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    profile = db.query(Profile).filter(Profile.profile_id == card.profile_id).first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Associated profile not found")
+    
+    if profile.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not have permission to activate this card")
+    
+    if card.card_status in ["lost", "deactivated", "disabled"]:
+        raise HTTPException(status_code=403, detail="This card cannot be activated. Please contact support.")
+    
+    card.card_status = CardStatus.active
+    card.activated_at = datetime.now()
+    card.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(card)
+    
+    return {
+        "message": "Card activated successfully",
+        "card_name:": card.card_name,
+        "card_status": card.card_status,
+        }
+
 
 def generate_card_code(length=8):
     return ''.join(
