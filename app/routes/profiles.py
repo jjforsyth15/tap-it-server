@@ -59,6 +59,7 @@ def deactivate_profile(profile_id: str, current_user = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="You do not have permission to deactivate this profile")
     
     profile.is_active = False
+    profile.updated_at = datetime.now()
     
     db.query(Card).filter(Card.profile_id == profile_id).update(
         {"card_status": "deactivated"}
