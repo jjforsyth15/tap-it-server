@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from app.routes import cards
 from app.routes import auth
+from app.routes import profiles
 
 app = FastAPI()
 
 app.include_router(cards.router)
 app.include_router(auth.router)
+app.include_router(profiles.router)
 
 @app.get("/")
 def root():
