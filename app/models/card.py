@@ -62,3 +62,4 @@ class Card(Base):
     )
     
     profile = relationship("Profile", back_populates="cards")
+    taps = relationship("CardTap", back_populates="card", cascade="all, delete-orphan")

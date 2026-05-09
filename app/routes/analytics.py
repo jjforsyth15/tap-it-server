@@ -31,7 +31,7 @@ def get_card_tap_count(card_id: UUID, current_user: User = Depends(get_current_u
     if not card:
         raise HTTPException(status_code=403, detail="You do not have permission to view analytics for this card")
     
-    tap_count = db.query(func.count(CardTap.tap_id)).filter(CardTap.card_id == card_id).scalar()
+    tap_count = len(card.taps)
     
     return {
         "card_name": card.card_name, 

@@ -2,8 +2,9 @@ import uuid
 from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
-from app.database import Base
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base 
 
 
 class CardTap(Base):
@@ -24,3 +25,5 @@ class CardTap(Base):
         server_default=func.now(),
         nullable=False
     )
+    
+    card = relationship("Card", back_populates="taps")
