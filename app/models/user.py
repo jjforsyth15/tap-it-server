@@ -33,7 +33,7 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(
         Boolean(), 
         nullable=False, 
-        default=True
+        default=False
         )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
