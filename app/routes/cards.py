@@ -27,7 +27,7 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Card not found")
     
     if card.card_status == "inactive":
-        return RedirectResponse(url=f"{url}/login?next=/cards/{card_code}")
+        return RedirectResponse(url=f"{url}/login?next=/activate-card/{card_code}")
     
     if card.card_status == "active":
         return RedirectResponse(url=f"{url}/profile/{card.profile_id}")
