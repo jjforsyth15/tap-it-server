@@ -1,7 +1,13 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from app.routes import cards
 from app.routes import auth
 from app.routes import profiles
+import os
+from dotenv import load_dotenv 
+
+load_dotenv()
+TEAM_ID = os.getenv("TEAM_ID")
 
 app = FastAPI()
 
@@ -20,3 +26,21 @@ def fake_login(next: str | None = None):
         "message": "Login page placeholder",
         "next": next
     }
+    
+    
+@app.get("/.well-known/apple-app-site-association")
+async def apple_app_site_association():
+    return JSONResponse(
+        content={
+            "applinks": {
+                "apps": [],
+                "details": [
+                    {
+                        "appIDs": [f"{TEAM_ID}.org.tapitcard.app"],
+                        "components": [{"/": "/cards/*"}]
+                    }
+                ]
+            }
+        },
+        media_type="application/json"
+    )

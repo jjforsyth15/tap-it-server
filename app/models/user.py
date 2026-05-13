@@ -18,6 +18,11 @@ class User(Base):
         unique=True, 
         nullable=False
         )
+    phone_number: Mapped[str] = mapped_column(
+        String(20),
+        unique=True,
+        nullable=True
+        )
     password_hash: Mapped[str] = mapped_column(
         String(255), 
         nullable=False
