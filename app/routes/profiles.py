@@ -91,6 +91,27 @@ def activate_profile(profile_id: str, current_user = Depends(get_current_user), 
     return {"message": "Profile and associated cards activated successfully"}
     
     
+@router.patch("/{profile_id}/update_website_url")
+def update_website_url(profile_id: str, website_url: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    if profile.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You do not have permission to update this profile")
+    
+    profile.website_url = website_url
+    profile.updated_at = datetime.now()
+    
+    db.commit()
+    db.refresh(profile)
+    
+    return {
+            "message": "Profile website URL updated successfully",
+            "profile_name": profile.profile_name,
+            "new_website_url": profile.website_url
+            }
     
     
 
