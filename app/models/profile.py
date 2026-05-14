@@ -42,6 +42,30 @@ class Profile(Base):
         onupdate=func.now(),
         nullable=False
     )
+    instagram_url: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=True
+    )
+    x_url: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=True
+    )
+    linkedin_url: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=True
+    )
+    facebook_url: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=True
+    )
+    tiktok_url: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=True
+    )
+    website_url: Mapped[str] = mapped_column(
+        String(2048),
+        nullable=True
+    )
     
     user = relationship("User", back_populates="profiles")
     cards = relationship("Card", back_populates="profile", cascade="all, delete-orphan")
