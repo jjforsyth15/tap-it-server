@@ -51,14 +51,3 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     
     return {"first_name": user.first_name, "last_name": user.last_name, "access_token": access_token, "token_type": "bearer"}
 
-
-# Get current user info - GET /auth/me
-@router.get("/me")
-def get_me(current_user: User = Depends(get_current_user)):
-    return {
-        "user_id": current_user.user_id,
-        "email": current_user.email,
-        "first_name": current_user.first_name,
-        "last_name": current_user.last_name,
-    }
-    
