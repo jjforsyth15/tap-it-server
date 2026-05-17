@@ -14,12 +14,14 @@ import string
 import random
 import os
 from datetime import datetime
+from app.routes.validators import validate_profile_user, validate_card_data
 
 url = os.getenv("CURRENT_URL")
 
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
+# Get card by card code - GET /cards/{card_code}
 @router.get("/{card_code}")
 def get_card(card_code: str, db: Session = Depends(get_db)):
     card = db.query(Card).filter(Card.card_code == card_code).first()
@@ -43,6 +45,7 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
     raise HTTPException(status_code=400, detail="Invalid card status")
 
 
+# Create new card - POST /cards/create_card
 @router.post("/create_card", response_model=CardCreateResponse)
 def create_card(card_data: CardCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     
@@ -50,15 +53,7 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
     if errors:
         raise HTTPException(status_code=400, detail={"detail": errors})
     
-    profile = db.query(Profile).filter(
-        Profile.profile_id == card_data.profile_id,
-    ).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to create a card for this profile")
+    profile = validate_profile_user(card_data.profile_id, current_user, db)
 
     card_code = generate_card_code(db)
     
@@ -81,21 +76,17 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
         }
 
 
+# Get all cards for a profile - GET /cards/profile/{profile_id}
 @router.get("/profile/{profile_id}", response_model=list[CardResponse])
 def get_cards_by_profile(
     profile_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
     ):
-        profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
-        
-        if not profile:
-            raise HTTPException(status_code=404, detail="Profile not found")
-        
-        if profile.user_id != current_user.user_id:
-            raise HTTPException(status_code=403, detail="You do not have permission to view cards for this profile")
+        profile = validate_profile_user(profile_id, current_user, db)
         
         return db.query(Card).filter(Card.profile_id == profile_id).all()
     
-    
+
+# Activate card - PATCH /cards/{card_code}/activate    
 @router.patch("/{card_code}/activate")
 def activate_card(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = db.query(Card).filter(Card.card_code == card_code).first()
@@ -103,13 +94,7 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     
-    profile = db.query(Profile).filter(Profile.profile_id == card.profile_id).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Associated profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to activate this card")
+    profile = validate_profile_user(card.profile_id, current_user, db)
     
     if card.card_status in ["lost", "deactivated", "disabled"]:
         raise HTTPException(status_code=403, detail="This card cannot be activated. Please contact support.")
@@ -127,7 +112,8 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
         "card_status": card.card_status,
         }
     
-    
+
+# swap card's profile - PATCH /cards/{card_id}/profile/{profile_id}
 @router.patch("/{card_id}/profile/{profile_id}")
 def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = db.query(Card).filter(Card.card_id == card_id).first()
@@ -159,6 +145,7 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
         }
 
 
+# Update card status - PATCH /cards/{card_id}/update_status
 @router.patch("/{card_id}/update_status")
 def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     valid_statuses = [
@@ -174,10 +161,7 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
     
-    profile = db.query(Profile).filter(Profile.profile_id == card.profile_id).first()
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to update the status of this card")
+    profile = validate_profile_user(card.profile_id, current_user, db)
     
     if status_data.card_status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid card status")
@@ -195,7 +179,7 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
         }
     
 
-
+# helper function - generate unique card code
 def generate_card_code(db: Session, length=8):
     characters = string.ascii_uppercase + string.digits
     
@@ -207,16 +191,3 @@ def generate_card_code(db: Session, length=8):
         if not existing_card:
             return code
     
-def validate_card_data(card_data: CardCreate):
-    errors = []
-    
-    if not card_data.profile_id:
-        errors.append("Missing profile id")
-        
-    if not card_data.card_name:
-        errors.append("Missing card name")
-        
-    if len(card_data.card_name) > 50:
-        errors.append("Card name must be 50 characters or less")
-    
-    return errors

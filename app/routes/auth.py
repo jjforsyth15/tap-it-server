@@ -7,9 +7,11 @@ from app.models.user import User
 from app.schemas.auth import UserRegister, UserLogin
 from app.core.auth import hash_password, verify_password, create_access_token
 from app.core.dependencies import get_current_user
+from app.routes.validators import validate_register_data
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
+# User registration - POST /auth/register
 @router.post("/register")
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
     
@@ -37,6 +39,7 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     return {"message": "User registered successfully", "email": new_user.email}
 
 
+# User login - POST /auth/login
 @router.post("/login")
 def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_data.username).first()
@@ -49,6 +52,7 @@ def login(user_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"first_name": user.first_name, "last_name": user.last_name, "access_token": access_token, "token_type": "bearer"}
 
 
+# Get current user info - GET /auth/me
 @router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):
     return {
@@ -58,16 +62,3 @@ def get_me(current_user: User = Depends(get_current_user)):
         "last_name": current_user.last_name,
     }
     
-def validate_register_data(user_data: UserRegister):
-    errors = []
-    
-    if not user_data.email:
-        errors.append("Missing email")
-    if not user_data.password:
-        errors.append("Missing password")
-    if not user_data.first_name:
-        errors.append("Missing first name")
-    if not user_data.last_name:
-        errors.append("Missing last name")
-
-    return errors

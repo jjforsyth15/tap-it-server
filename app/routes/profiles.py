@@ -5,8 +5,9 @@ from app.models.profile import Profile
 from app.models.card import Card
 from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileResponse, ProfileUpdate
 from app.core.dependencies import get_current_user
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
+from app.routes.validators import validate_profile_data, validate_profile_user
 
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
@@ -40,12 +41,12 @@ def create_profile(
     }
     
     
-# Get all profiles for current user - GET /profiles/me      update***
+# Get all profiles for current user - GET /profiles/me 
 @router.get("/me",response_model=list[ProfileResponse])
 def get_my_profiles(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
-):
+):    
     profiles = db.query(Profile).filter(Profile.user_id == current_user.user_id).all()
     
     return profiles
@@ -54,13 +55,7 @@ def get_my_profiles(
 # Get profile by ID - GET /profiles/{profile_id}
 @router.get("/{profile_id}", response_model=ProfileResponse)
 def get_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to view this profile")
+    profile = validate_profile_user(profile_id, current_user, db)
     
     return profile
 
@@ -68,13 +63,7 @@ def get_profile(profile_id: UUID, current_user = Depends(get_current_user), db: 
 # Deactivate profile - PATCH /profiles/{profile_id}/deactivate
 @router.patch("/{profile_id}/deactivate")
 def deactivate_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to deactivate this profile")
+    profile = validate_profile_user(profile_id, current_user, db)
     
     profile.is_active = False
     profile.updated_at = datetime.now()
@@ -91,13 +80,7 @@ def deactivate_profile(profile_id: UUID, current_user = Depends(get_current_user
 # Activate profile - PATCH /profiles/{profile_id}/activate
 @router.patch("/{profile_id}/activate")
 def activate_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to activate this profile")
+    profile = validate_profile_user(profile_id, current_user, db)
     
     profile.is_active = True
     profile.updated_at = datetime.now()
@@ -114,13 +97,7 @@ def activate_profile(profile_id: UUID, current_user = Depends(get_current_user),
 # Update profile website URL - PATCH /profiles/{profile_id}/update_website_url    
 @router.patch("/{profile_id}/update_website_url")
 def update_website_url(profile_id: UUID, website_url: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to update this profile")
+    profile = validate_profile_user(profile_id, current_user, db)
     
     profile.website_url = website_url
     profile.updated_at = datetime.now()
@@ -135,16 +112,11 @@ def update_website_url(profile_id: UUID, website_url: str, current_user = Depend
             }
  
 
+# Update profile details - PATCH /profiles/{profile_id}/update_profile      ***update***
 @router.patch("/{profile_id}/update_profile")
 def update_profile(profile_id: UUID, profile_data: ProfileUpdate, current_user = Depends(get_current_user), db: Session = Depends(get_db)):   
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="You do not have permission to update this profile")
-    
+    profile = validate_profile_user(profile_id, current_user, db)
+
     update_data = profile_data.model_dump(exclude_unset=True)
     
     if "website_url" in update_data and update_data["website_url"] is not None:
@@ -163,18 +135,3 @@ def update_profile(profile_id: UUID, profile_data: ProfileUpdate, current_user =
             "profile": profile
             }
     
-    
-# Helped function - validate profile data
-def validate_profile_data(profile_data: ProfileCreate):
-    errors = []
-    
-    if not profile_data.profile_name:
-        errors.append("Missing profile name")
-        
-    if len(profile_data.profile_name) > 50:
-        errors.append("Profile name must be 50 characters or less")
-        
-    if profile_data.bio and len(profile_data.bio) > 500:
-        errors.append("Bio must be 500 characters or less")
-    
-    return errors
