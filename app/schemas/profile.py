@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl, field_validator
 from datetime import datetime
 from uuid import UUID
+from typing import Optional
 
 class ProfileCreate(BaseModel):
     profile_name: str
@@ -12,11 +13,24 @@ class ProfileResponse(BaseModel):
     profile_name: str
     bio: str | None = None
     is_active: bool
-    created_at: datetime
-    
+    created_at: datetime    
     class Config:
         from_attributes = True
         
 class ProfileCreateResponse(BaseModel):
     message: str
     profile: ProfileResponse
+    
+    
+class ProfileUpdate(BaseModel):
+    profile_name: Optional[str] = None
+    bio: Optional[str] = None
+    website_url: Optional[HttpUrl] = None
+    
+    @field_validator("website_url", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, value):
+        if value == "":
+            return None
+        
+        return value
