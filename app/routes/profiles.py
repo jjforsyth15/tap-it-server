@@ -135,3 +135,24 @@ def update_profile(profile_id: UUID, profile_data: ProfileUpdate, current_user =
             "profile": profile
             }
     
+
+@router.delete("/{profile_id}")
+def delete_profile(profile_id: UUID, reassign_to_profile_id: UUID | None = None, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = validate_profile_user(profile_id, current_user, db)
+    
+    if reassign_to_profile_id:
+        new_profile = validate_profile_user(reassign_to_profile_id, current_user, db)
+        
+        db.query(Card).filter(Card.profile_id == profile_id).update({Card.profile_id: reassign_to_profile_id})
+        
+        messsage = "Profile cards reassigned to: " + new_profile.profile_name
+        
+    else:
+        db.query(Card).filter(Card.profile_id == profile_id).update({Card.profile_id: None})
+        
+        mwesssage = "Profile cards unassigned"
+    
+    db.delete(profile)
+    db.commit()
+    
+    return {"message": "Profile deleted successfully\n" + messsage}

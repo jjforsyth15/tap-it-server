@@ -22,9 +22,9 @@ class Card(Base):
         UUID(as_uuid=True),
         primary_key=True
     )
-    profile_id: Mapped[uuid.UUID] = mapped_column(
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("profiles.profile_id", ondelete="CASCADE"),
+        ForeignKey("profiles.profile_id", ondelete="SET NULL"),
         nullable=True
     )
     card_name: Mapped[str] = mapped_column(
