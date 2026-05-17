@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.profile import Profile
 from uuid import UUID
+from app.models.profile_links import ProfileLink
 from app.schemas.auth import UserRegister
 from app.schemas.card import CardCreate
 from app.schemas.profile import ProfileCreate
@@ -66,3 +67,13 @@ def validate_register_data(user_data: UserRegister):
         errors.append("Missing last name")
 
     return errors
+
+
+# validate profile link exists in database
+def validate_link_in_db(link_id: UUID, db: Session):
+    link = db.query(ProfileLink).filter(ProfileLink.link_id == link_id).first()
+    
+    if not link:
+        raise HTTPException(status_code=404, detail="Profile link not found")
+    
+    return link
