@@ -5,7 +5,7 @@ from app.models.profile import Profile
 from uuid import UUID
 from app.models.profile_links import ProfileLink
 from app.schemas.auth import UserRegister
-from app.schemas.card import CardCreate
+from app.schemas.card import CardCreate, CardStatusUpdate
 from app.schemas.profile import ProfileCreate
 
 
@@ -88,3 +88,19 @@ def validate_card_in_db(card_code: str, db: Session):
         raise HTTPException(status_code=404, detail="Card not found")
     
     return card
+
+
+def validate_card_status(status_data: CardStatusUpdate):
+    valid_statuses = [
+        "inactive", 
+        "active", 
+        "deactivated",
+        "lost",
+        "disabled"
+    ]
+    
+    if status_data.card_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Invalid card status")
+    
+    return
+    

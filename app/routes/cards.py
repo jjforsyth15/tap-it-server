@@ -14,7 +14,7 @@ import string
 import random
 import os
 from datetime import datetime
-from app.routes.validators import validate_profile_user, validate_card_data, validate_card_in_db
+from app.routes.validators import validate_profile_user, validate_card_data, validate_card_in_db, validate_card_status
 
 url = os.getenv("CURRENT_URL")
 
@@ -139,20 +139,12 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
 # Update card status - PATCH /cards/{card_id}/update_status
 @router.patch("/{card_id}/update_status")
 def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    valid_statuses = [
-        "inactive", 
-        "active", 
-        "deactivated",
-        "lost",
-        "disabled"
-    ]
     
     card = validate_card_in_db(card_id, db)
     
-    profile = validate_profile_user(card.profile_id, current_user, db)
+    validate_profile_user(card.profile_id, current_user, db)
     
-    if status_data.card_status not in valid_statuses:
-        raise HTTPException(status_code=400, detail="Invalid card status")
+    validate_card_status(status_data)
     
     card.card_status = status_data.card_status
     card.updated_at = datetime.now()
