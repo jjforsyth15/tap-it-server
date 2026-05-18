@@ -34,5 +34,5 @@ class ProfileLink(Base):
         onupdate=func.now(),
         nullable=False
         )
-    
-    profile = relationship("Profile", back_populates="links")
+
+    profile = relationship("Profile", back_populates="links")    

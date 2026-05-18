@@ -4,7 +4,7 @@ from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base 
+from app.db.base import Base
 
 class Profile(Base):
     __tablename__ = "profiles"
@@ -53,3 +53,4 @@ class Profile(Base):
     
     user = relationship("User", back_populates="profiles")
     cards = relationship("Card", back_populates="profile")
+    links = relationship("ProfileLink", back_populates="profile", cascade="all, delete-orphan")
