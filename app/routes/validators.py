@@ -102,5 +102,5 @@ def validate_card_status(status_data: CardStatusUpdate):
     if status_data.card_status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid card status")
     
-    return
+    return True
     
