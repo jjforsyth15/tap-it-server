@@ -14,7 +14,7 @@ import string
 import random
 import os
 from datetime import datetime
-from app.routes.validators import validate_profile_user, validate_card_data
+from app.routes.validators import validate_profile_user, validate_card_data, validate_card_in_db
 
 url = os.getenv("CURRENT_URL")
 
@@ -24,11 +24,8 @@ router = APIRouter(prefix="/cards", tags=["cards"])
 # Get card by card code - GET /cards/{card_code}
 @router.get("/{card_code}")
 def get_card(card_code: str, db: Session = Depends(get_db)):
-    card = db.query(Card).filter(Card.card_code == card_code).first()
-    
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    
+    card = validate_card_in_db(card_code, db)
+
     if card.card_status == "inactive":
         return RedirectResponse(url=f"{url}/auth/login?next=/activate-card/{card_code}")
     
@@ -89,11 +86,8 @@ def get_cards_by_profile(
 # Activate card - PATCH /cards/{card_code}/activate    
 @router.patch("/{card_code}/activate")
 def activate_card(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    card = db.query(Card).filter(Card.card_code == card_code).first()
-    
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    
+    card = validate_card_in_db(card_code, db)
+
     profile = validate_profile_user(card.profile_id, current_user, db)
     
     if card.card_status in ["lost", "deactivated", "disabled"]:
@@ -116,10 +110,7 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
 # swap card's profile - PATCH /cards/{card_id}/profile/{profile_id}
 @router.patch("/{card_id}/profile/{profile_id}")
 def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    card = db.query(Card).filter(Card.card_id == card_id).first()
-    
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
+    card = validate_card_in_db(card_id, db)
     
     new_profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
     
@@ -156,10 +147,7 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
         "disabled"
     ]
     
-    card = db.query(Card).filter(Card.card_id == card_id).first()
-    
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
+    card = validate_card_in_db(card_id, db)
     
     profile = validate_profile_user(card.profile_id, current_user, db)
     

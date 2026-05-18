@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from app.models.card import Card
 from app.models.profile import Profile
 from uuid import UUID
 from app.models.profile_links import ProfileLink
@@ -77,3 +78,13 @@ def validate_link_in_db(link_id: UUID, db: Session):
         raise HTTPException(status_code=404, detail="Profile link not found")
     
     return link
+
+
+# validate card exists in database
+def validate_card_in_db(card_code: str, db: Session):
+    card = db.query(Card).filter(Card.card_code == card_code).first()
+    
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    return card
