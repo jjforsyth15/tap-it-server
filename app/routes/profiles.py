@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.profile import Profile
 from app.models.card import Card
-from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileResponse, ProfileUpdate
+from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileResponse, ProfileUpdate, PublicProfileResponse
 from app.core.dependencies import get_current_user
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -156,3 +156,13 @@ def delete_profile(profile_id: UUID, reassign_to_profile_id: UUID | None = None,
     db.commit()
     
     return {"message": "Profile deleted successfully\n" + messsage}
+
+
+@router.get("/public/{profile_id}", response_model=PublicProfileResponse)
+def get_public_profile(profile_id: UUID, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.profile_id == profile_id, Profile.is_active == True).first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    return profile

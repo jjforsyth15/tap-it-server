@@ -34,3 +34,23 @@ class ProfileUpdate(BaseModel):
             return None
         
         return value
+    
+    
+class PublicProfileLinkResponse(BaseModel):
+    label: str
+    url: str
+    
+    class Config:
+        from_attributes = True
+        
+        
+        
+class PublicProfileResponse(BaseModel):
+    profile_id: UUID
+    profile_name: str
+    bio: str | None = None
+    website_url: str | None = None
+    links: list[PublicProfileLinkResponse] = []
+    
+    class Config:
+        from_attributes = True

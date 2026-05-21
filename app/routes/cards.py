@@ -17,7 +17,7 @@ from datetime import datetime
 from app.routes.validators import validate_profile_user, validate_card_data, validate_card_in_db, validate_card_status
 
 url = os.getenv("CURRENT_URL")
-
+frontend_url = os.getenv("FRONTEND_URL")
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
@@ -27,14 +27,14 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
     card = validate_card_in_db(card_code, db)
 
     if card.card_status == "inactive":
-        return RedirectResponse(url=f"{url}/auth/login?next=/activate-card/{card_code}")
+        return RedirectResponse(url=f"{frontend_url}/login?next=/activate-card/{card_code}")
     
     if card.card_status == "active":
         new_tap = CardTap(card_id=card.card_id)
         db.add(new_tap)
         db.commit()
 
-        return RedirectResponse(url=f"{url}/profile/{card.profile_id}")
+        return RedirectResponse(url=f"{frontend_url}/public/{card.profile_id}")
     
     if card.card_status in ["deactivated", "lost", "disabled"]:
         raise HTTPException(status_code=403, detail="Card is not available")
@@ -90,6 +90,12 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
 
     profile = validate_profile_user(card.profile_id, current_user, db)
     
+    if not card.profile_id:
+        raise HTTPException(status_code=400, detail="Card is not assigned to a profile")
+    
+    if card.card_status == "active":
+        raise HTTPException(status_code=400, detail="Card is already active")
+    
     if card.card_status in ["lost", "deactivated", "disabled"]:
         raise HTTPException(status_code=403, detail="This card cannot be activated. Please contact support.")
     
@@ -104,6 +110,7 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
         "message": "Card activated successfully",
         "card_name": card.card_name,
         "card_status": card.card_status,
+        "profile_id": card.profile_id
         }
     
 
@@ -133,6 +140,7 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
         "message": "Card profile updated successfully",
         "card_name": card.card_name,
         "new_profile_name": new_profile.profile_name,
+        "profile_id": card.profile_id
         }
 
 
@@ -156,6 +164,7 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
         "message": "Card status updated successfully",
         "card_name": card.card_name,
         "card_status": card.card_status,
+        "profile_id": card.profile_id   
         }
     
 
