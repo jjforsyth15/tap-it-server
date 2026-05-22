@@ -24,3 +24,11 @@ class CardCreateResponse(BaseModel):
     
 class CardStatusUpdate(BaseModel):
     card_status: str
+    
+
+class PublicCardResponse(BaseModel):
+    card_code: str
+    card_name: str
+    card_status: str
+    profile_id: UUID | None = None
+    

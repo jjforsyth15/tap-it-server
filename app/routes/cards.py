@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate
+from app.schemas.card import CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate, PublicCardResponse
 from uuid import UUID
 from app.models.profile import Profile
 from app.models.card_tap import CardTap
@@ -20,6 +20,13 @@ url = os.getenv("CURRENT_URL")
 frontend_url = os.getenv("FRONTEND_URL")
 
 router = APIRouter(prefix="/cards", tags=["cards"])
+
+# Get public card info - GET /cards/{card_code}/public
+@router.get("/{card_code}/public", response_model=PublicCardResponse)
+def get_public_card_info(card_code: str, db: Session = Depends(get_db)):
+    card = validate_card_in_db(card_code, db)
+
+    return card
 
 # Get card by card code - GET /cards/{card_code}
 @router.get("/{card_code}")
@@ -166,7 +173,7 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
         "card_status": card.card_status,
         "profile_id": card.profile_id   
         }
-    
+        
 
 # helper function - generate unique card code
 def generate_card_code(db: Session, length=8):
