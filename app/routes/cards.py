@@ -173,6 +173,24 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
         "card_status": card.card_status,
         "profile_id": card.profile_id   
         }
+    
+    
+@router.get("/{card_code}/activation_info")
+def get_card_activation_info(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    card = validate_card_in_db(card_code, db)
+    
+    if card.card_status != "inactive":
+        raise HTTPException(status_code=400, detail="Card is not inactive")
+    
+    if not card.profile or card.profile.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to activate this card")
+    
+    return {
+        "card_code": card.card_code,
+        "card_name": card.card_name,
+        "card_status": card.card_status,
+        "profile_id": card.profile_id
+    }
         
 
 # helper function - generate unique card code
