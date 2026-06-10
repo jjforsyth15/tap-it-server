@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.profile import Profile
+from app.models.profile import Profile, ProfileStatus
 from app.models.card import Card
 from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileResponse, ProfileUpdate, PublicProfileResponse
 from app.core.dependencies import get_current_user
@@ -25,10 +25,12 @@ def create_profile(
         raise HTTPException(status_code=400, detail={"detail": errors})
 
     new_profile = Profile(
-        profile_id=str(uuid4()),
+        profile_id=uuid4(),
         user_id=current_user.user_id,
         profile_name=profile_data.profile_name,
         bio=profile_data.bio,
+        profile_status=profile_data.profile_status,
+        profile_image_url=profile_data.profile_image_url
     )
     
     db.add(new_profile)
@@ -52,6 +54,17 @@ def get_my_profiles(
     return profiles
 
 
+# Get public profile - GET /profiles/public/{profile_id}
+@router.get("/public/{profile_id}", response_model=PublicProfileResponse)
+def get_public_profile(profile_id: UUID, db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.profile_id == profile_id, Profile.profile_status == ProfileStatus.active).first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    return profile
+
+
 # Get profile by ID - GET /profiles/{profile_id}
 @router.get("/{profile_id}", response_model=ProfileResponse)
 def get_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -65,7 +78,7 @@ def get_profile(profile_id: UUID, current_user = Depends(get_current_user), db: 
 def deactivate_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = validate_profile_user(profile_id, current_user, db)
     
-    profile.is_active = False
+    profile.profile_status = ProfileStatus.inactive
     profile.updated_at = datetime.now()
     
     db.query(Card).filter(Card.profile_id == profile_id).update(
@@ -82,7 +95,7 @@ def deactivate_profile(profile_id: UUID, current_user = Depends(get_current_user
 def activate_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = validate_profile_user(profile_id, current_user, db)
     
-    profile.is_active = True
+    profile.profile_status = ProfileStatus.active
     profile.updated_at = datetime.now()
     
     db.query(Card).filter(Card.profile_id == profile_id).update(
@@ -94,22 +107,22 @@ def activate_profile(profile_id: UUID, current_user = Depends(get_current_user),
     return {"message": "Profile and associated cards activated successfully"}
     
 
-# Update profile website URL - PATCH /profiles/{profile_id}/update_website_url    
-@router.patch("/{profile_id}/update_website_url")
-def update_website_url(profile_id: UUID, website_url: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = validate_profile_user(profile_id, current_user, db)
+# # Update profile website URL - PATCH /profiles/{profile_id}/update_website_url    
+# @router.patch("/{profile_id}/update_website_url")
+# def update_website_url(profile_id: UUID, website_url: str, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+#     profile = validate_profile_user(profile_id, current_user, db)
     
-    profile.website_url = website_url
-    profile.updated_at = datetime.now()
+#     profile.website_url = website_url
+#     profile.updated_at = datetime.now()
     
-    db.commit()
-    db.refresh(profile)
+#     db.commit()
+#     db.refresh(profile)
     
-    return {
-            "message": "Profile website URL updated successfully",
-            "profile_name": profile.profile_name,
-            "new_website_url": profile.website_url
-            }
+#     return {
+#             "message": "Profile website URL updated successfully",
+#             "profile_name": profile.profile_name,
+#             "new_website_url": profile.website_url
+#             }
  
 
 # Update profile details - PATCH /profiles/{profile_id}/update_profile      ***update***
@@ -118,9 +131,6 @@ def update_profile(profile_id: UUID, profile_data: ProfileUpdate, current_user =
     profile = validate_profile_user(profile_id, current_user, db)
 
     update_data = profile_data.model_dump(exclude_unset=True)
-    
-    if "website_url" in update_data and update_data["website_url"] is not None:
-        update_data["website_url"] = str(update_data["website_url"])
     
     for key, value in update_data.items():
         setattr(profile, key, value)
@@ -150,19 +160,10 @@ def delete_profile(profile_id: UUID, reassign_to_profile_id: UUID | None = None,
     else:
         db.query(Card).filter(Card.profile_id == profile_id).update({Card.profile_id: None})
         
-        mwesssage = "Profile cards unassigned"
+        messsage = "Profile cards unassigned"
     
     db.delete(profile)
     db.commit()
     
     return {"message": "Profile deleted successfully\n" + messsage}
 
-
-@router.get("/public/{profile_id}", response_model=PublicProfileResponse)
-def get_public_profile(profile_id: UUID, db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id, Profile.is_active == True).first()
-    
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    return profile

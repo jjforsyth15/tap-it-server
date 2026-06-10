@@ -1,19 +1,24 @@
-from pydantic import BaseModel, HttpUrl, field_validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from uuid import UUID
-from typing import Optional
+
+from app.models.profile import ProfileStatus
 
 class ProfileCreate(BaseModel):
     profile_name: str
     bio: str | None = None
+    profile_status: ProfileStatus = ProfileStatus.active
+    profile_image_url: str | None = None
     
 class ProfileResponse(BaseModel):
     profile_id: UUID
     user_id: UUID
     profile_name: str
     bio: str | None = None
-    is_active: bool
+    profile_status: ProfileStatus
+    profile_image_url: str | None = None
     created_at: datetime    
+    updated_at: datetime
     class Config:
         from_attributes = True
         
@@ -23,11 +28,12 @@ class ProfileCreateResponse(BaseModel):
     
     
 class ProfileUpdate(BaseModel):
-    profile_name: Optional[str] = None
-    bio: Optional[str] = None
-    website_url: Optional[HttpUrl] = None
+    profile_name: str | None = None
+    bio: str | None = None
+    profile_status: ProfileStatus | None = None
+    profile_image_url: str | None = None
     
-    @field_validator("website_url", mode="before")
+    @field_validator("profile_image_url", mode="before")
     @classmethod
     def empty_string_to_none(cls, value):
         if value == "":
@@ -49,8 +55,9 @@ class PublicProfileResponse(BaseModel):
     profile_id: UUID
     profile_name: str
     bio: str | None = None
-    website_url: str | None = None
-    links: list[PublicProfileLinkResponse] = []
+    profile_status: ProfileStatus
+    profile_image_url: str | None = None
+    links: list[PublicProfileLinkResponse] = Field(default_factory=list)
     
     class Config:
         from_attributes = True

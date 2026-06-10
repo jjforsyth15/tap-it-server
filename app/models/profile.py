@@ -1,11 +1,18 @@
+import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime, func
+from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
+
+class ProfileStatus(str, enum.Enum):
+    active = "active"
+    inactive = "inactive"
+    archived = "archived"
+    disabled = "disabled"
 class Profile(Base):
     __tablename__ = "profiles"
     
@@ -26,10 +33,14 @@ class Profile(Base):
         Text(), 
         nullable=True
         )    
-    is_active: Mapped[bool] = mapped_column(
-        Boolean(), 
+    profile_status: Mapped[ProfileStatus] = mapped_column(
+        Enum(ProfileStatus, name="profile_status"), 
         nullable=False, 
-        default=True
+        default=ProfileStatus.active
+        )
+    profile_image_url: Mapped[str | None] = mapped_column(
+        String(), 
+        nullable=True
         )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -42,14 +53,7 @@ class Profile(Base):
         onupdate=func.now(),
         nullable=False
     )
-    instagram_url: Mapped[str] = mapped_column(
-        String(2048),
-        nullable=True
-    )
-    website_url: Mapped[str] = mapped_column(
-        String(2048),
-        nullable=True
-    )
+
     
     user = relationship("User", back_populates="profiles")
     cards = relationship("Card", back_populates="profile")
