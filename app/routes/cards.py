@@ -179,17 +179,21 @@ def update_card_status(card_id: str, status_data: CardStatusUpdate, current_user
 def get_card_activation_info(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_in_db(card_code, db)
     
-    if card.card_status != "inactive":
-        raise HTTPException(status_code=400, detail="Card is not inactive")
-    
-    if not card.profile or card.profile.user_id != current_user.user_id:
+    if card.profile.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to activate this card")
+    
+    if card.card_status == "active":
+        raise HTTPException(status_code=400, detail="Card is already active")
+    
+    if card.card_status in ["lost", "deactivated", "disabled"]:
+        raise HTTPException(status_code=403, detail="This card cannot be activated. Please contact support.")    
+    
     
     return {
         "card_code": card.card_code,
         "card_name": card.card_name,
         "card_status": card.card_status,
-        "profile_id": card.profile_id
+        "can_activate": True
     }
         
 
