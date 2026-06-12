@@ -20,6 +20,7 @@ class ProfileLinkCreate(BaseModel):
 class ProfileLinkResponse(BaseModel):
     link_id: UUID
     profile_id: UUID
+    label: str
     url: HttpUrl
     created_at: datetime
     updated_at: datetime

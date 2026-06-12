@@ -19,6 +19,10 @@ class ProfileLink(Base):
         ForeignKey("profiles.profile_id", ondelete="CASCADE"),
         nullable=False
         )
+    label: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False
+        )
     url: Mapped[str] = mapped_column(
         String(2048), 
         nullable=False

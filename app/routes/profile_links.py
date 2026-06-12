@@ -51,7 +51,7 @@ def get_profile_links(
 
 
 # Update profile link - PATCH /profile_links/links/{link_id}
-@router.patch("links/{link_id}", response_model=ProfileLinkResponse)
+@router.patch("/links/{link_id}", response_model=ProfileLinkResponse)
 def update_profile_link(
     link_id: UUID,
     link_data: ProfileLinkCreate,
