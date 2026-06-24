@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import cards
+from app.routes import cards, profile_images
 from app.routes import auth
 from app.routes import profiles
 from app.routes import users
@@ -32,6 +32,7 @@ app.include_router(profiles.router)
 app.include_router(analytics.router)
 app.include_router(profile_links.router)
 app.include_router(users.router)
+app.include_router(profile_images.router)
 
 @app.get("/")
 def root():
