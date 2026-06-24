@@ -22,6 +22,7 @@ class ProfileLinkResponse(BaseModel):
     profile_id: UUID
     label: str
     url: HttpUrl
+    display_order: int
     created_at: datetime
     updated_at: datetime
     
@@ -32,3 +33,12 @@ class ProfileLinkResponse(BaseModel):
 class ProfileLinkUpdate(BaseModel):
     label: Optional[str] = None
     url: Optional[HttpUrl] = None
+    
+    
+class ProfileLinkOrderItem(BaseModel):
+    link_id: UUID
+    display_order: int
+    
+    
+class ProfileLinkReorderRequest(BaseModel):
+    links: list[ProfileLinkOrderItem]

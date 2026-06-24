@@ -4,7 +4,7 @@ from app.database import get_db
 from app.models.profile_links import ProfileLink
 from app.models.profile import Profile
 from app.schemas import profile_link
-from app.schemas.profile_link import ProfileLinkCreate, ProfileLinkResponse
+from app.schemas.profile_link import ProfileLinkCreate, ProfileLinkReorderRequest, ProfileLinkResponse
 from app.core.dependencies import get_current_user
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -45,7 +45,7 @@ def get_profile_links(
 ):
     validate_profile_user(profile_id, current_user, db)
     
-    links = db.query(ProfileLink).filter(ProfileLink.profile_id == profile_id).all()
+    links = db.query(ProfileLink).filter(ProfileLink.profile_id == profile_id).order_by(ProfileLink.display_order.asc(), ProfileLink.created_at.asc()).all()
     
     return links
 
@@ -92,7 +92,7 @@ def delete_profile_link(
     
     return {"message": "Profile link deleted successfully"}
 
-
+# Get a specific profile link - GET /profile_links/links/{link_id}
 @router.get("/links/{link_id}", response_model=ProfileLinkResponse)
 def get_profile_link(
     link_id: UUID,
@@ -105,3 +105,15 @@ def get_profile_link(
     
     return link
 
+# Reorder profile links - PATCH /profile_links/reorder
+@router.patch("/reorder")
+def reorder_profile_links(payload: ProfileLinkReorderRequest, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    for item in payload.links:
+        link = validate_link_in_db(item.link_id, db)
+        profile = validate_profile_user(link.profile_id, current_user, db)
+        
+        link.display_order = item.display_order
+        
+    db.commit()
+    
+    return {"message": "Profile links reordered successfully"}
