@@ -13,6 +13,8 @@ class CardResponse(BaseModel):
     pointing_url: str
     card_status: str
     created_at: datetime
+    activated_at: datetime | None = None
+    updated_at: datetime
     
     class Config:
         from_attributes = True

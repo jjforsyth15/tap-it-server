@@ -87,7 +87,9 @@ def get_cards_by_profile(
     ):
         profile = validate_profile_user(profile_id, current_user, db)
         
-        return db.query(Card).filter(Card.profile_id == profile_id).all()
+        cards = db.query(Card).filter(Card.profile_id == profile_id).all()
+        
+        return cards
     
 
 # Activate card - PATCH /cards/{card_code}/activate    
