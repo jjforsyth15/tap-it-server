@@ -9,7 +9,7 @@ from uuid import UUID
 
 router = APIRouter(prefix="/profiles", tags=["Profile Images"])
 
-# Need to complete to add images
+# Upload profile avatar - POST /profiles/{profile_id}/avatar
 @router.post("/{profile_id}/avatar")
 async def upload_profile_avatar(
     profile_id: UUID,
@@ -50,5 +50,26 @@ async def upload_profile_avatar(
     
     return {
         "message": "Profile avatar uploaded successfully",
+        "profile": profile
+    }
+    
+
+@router.delete("/{profile_id}/avatar")
+def delete_profile_avatar(
+    profile_id: UUID,
+    db: Session = Depends(get_db),
+    current_user= Depends(get_current_user),
+):
+    profile = validate_profile_user(profile_id, current_user, db)
+    
+    if not profile.profile_image_url:
+        raise HTTPException(status_code=400, detail="No avatar to delete.")
+    
+    profile.profile_image_url = None
+    db.commit()
+    db.refresh(profile)
+    
+    return {
+        "message": "Profile avatar deleted successfully",
         "profile": profile
     }
