@@ -19,12 +19,24 @@ async def upload_profile_avatar(
 ):
     profile = validate_profile_user(profile_id, current_user, db)
     
-    if file.content_type not in ["image/jpeg", "image/png"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg", "image/webp"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, JPG, and WEBP are allowed.")
     
     file_bytes = await file.read()
     
-    path = f"profiles/{profile_id}/avatar"
+    extension_map = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/jpg": "jpg",
+        "image/webp": "webp",
+    }
+    
+    extension = extension_map.get(file.content_type)
+    
+    if not extension:
+        raise HTTPException(status_code=400, detail="Unsupported file type.")
+    
+    path = f"profiles/{profile_id}/avatar.{extension}"
     
     public_url = upload_avatar(
         file_bytes=file_bytes,
@@ -38,5 +50,5 @@ async def upload_profile_avatar(
     
     return {
         "message": "Profile avatar uploaded successfully",
-        "profile_image_url": public_url
+        "profile": profile
     }

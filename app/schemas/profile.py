@@ -41,15 +41,12 @@ class ProfileUpdate(BaseModel):
         
         return value
     
-    
 class PublicProfileLinkResponse(BaseModel):
     label: str
     url: str
     
     class Config:
         from_attributes = True
-        
-        
         
 class PublicProfileResponse(BaseModel):
     profile_id: UUID
