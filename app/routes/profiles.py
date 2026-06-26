@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.profile import Profile, ProfileStatus
 from app.models.card import Card
-from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileResponse, ProfileUpdate, PublicProfileResponse
+from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileOrderUpdate, ProfileResponse, ProfileUpdate, PublicProfileResponse
 from app.core.dependencies import get_current_user
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -167,3 +167,22 @@ def delete_profile(profile_id: UUID, reassign_to_profile_id: UUID | None = None,
     
     return {"message": "Profile deleted successfully\n" + messsage}
 
+
+
+@router.patch("/reorder")
+def reorder_profiles(updates: list[ProfileOrderUpdate], db: Session = Depends(get_db), current_user= Depends(get_current_user)):
+    profile_ids = [item.profile_id for item in updates]
+    
+    profiles = [validate_profile_user(profile_id, current_user, db) for profile_id in profile_ids]
+    
+    if len(profiles) != len(updates):
+        raise HTTPException(status_code=400, detail="Invalid profile reorder request. Some profiles do not belong to the current user.")
+    
+    order_map = {item.profile_id: item.display_order for item in updates}
+    
+    for profile in profiles:
+        profile.display_order = order_map[profile.profile_id]
+    
+    db.commit()
+    
+    return {"message": "Profiles reordered successfully"}

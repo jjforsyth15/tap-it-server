@@ -17,6 +17,9 @@ class ProfileResponse(BaseModel):
     bio: str | None = None
     profile_status: ProfileStatus
     profile_image_url: str | None = None
+    display_order: int
+    link_count: int
+    card_count: int
     created_at: datetime    
     updated_at: datetime
     class Config:
@@ -58,3 +61,8 @@ class PublicProfileResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+        
+class ProfileOrderUpdate(BaseModel):
+    profile_id: UUID
+    display_order: int

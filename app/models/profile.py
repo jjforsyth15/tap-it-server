@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime, func, Enum
+from sqlalchemy import Integer, String, Boolean, ForeignKey, Text, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,11 @@ class Profile(Base):
     profile_image_url: Mapped[str | None] = mapped_column(
         String(), 
         nullable=True
+        )
+    display_order: Mapped[int] = mapped_column(
+        Integer(), 
+        nullable=False, 
+        default=0
         )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
