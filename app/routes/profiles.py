@@ -4,7 +4,7 @@ from app.database import get_db
 from app.models.profile import Profile, ProfileStatus
 from app.models.card import Card
 from app.models.profile_links import ProfileLink
-from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileOrderUpdate, ProfileResponse, ProfileUpdate, PublicProfileResponse
+from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileOrderUpdateRequest, ProfileOrderUpdateRequest, ProfileResponse, ProfileUpdate, PublicProfileResponse
 from app.core.dependencies import get_current_user
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -50,7 +50,7 @@ def get_my_profiles(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):    
-    profiles = db.query(Profile).filter(Profile.user_id == current_user.user_id).all()
+    profiles = db.query(Profile).filter(Profile.user_id == current_user.user_id).order_by(Profile.display_order.asc(), Profile.created_at.asc()).all()
     
     for profile in profiles:
         add_link_and_card_counts(profile, db)
@@ -176,15 +176,15 @@ def delete_profile(profile_id: UUID, reassign_to_profile_id: UUID | None = None,
 
 
 @router.patch("/reorder")
-def reorder_profiles(updates: list[ProfileOrderUpdate], db: Session = Depends(get_db), current_user= Depends(get_current_user)):
-    profile_ids = [item.profile_id for item in updates]
+def reorder_profiles(updates: ProfileOrderUpdateRequest, db: Session = Depends(get_db), current_user= Depends(get_current_user)):
+    profile_ids = [item.profile_id for item in updates.profiles]
     
     profiles = [validate_profile_user(profile_id, current_user, db) for profile_id in profile_ids]
     
-    if len(profiles) != len(updates):
+    if len(profiles) != len(updates.profiles):
         raise HTTPException(status_code=400, detail="Invalid profile reorder request. Some profiles do not belong to the current user.")
     
-    order_map = {item.profile_id: item.display_order for item in updates}
+    order_map = {item.profile_id: item.display_order for item in updates.profiles}
     
     for profile in profiles:
         profile.display_order = order_map[profile.profile_id]

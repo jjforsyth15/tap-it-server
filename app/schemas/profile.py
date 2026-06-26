@@ -62,8 +62,9 @@ class PublicProfileResponse(BaseModel):
     class Config:
         from_attributes = True
         
-class ProfileOrderUpdate(BaseModel):
+class ProfileOrderUpdateItem(BaseModel):
     profile_id: UUID
     display_order: int
     
-    
+class ProfileOrderUpdateRequest(BaseModel):
+    profiles: list[ProfileOrderUpdateItem]
