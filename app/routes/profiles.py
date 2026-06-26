@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.profile import Profile, ProfileStatus
 from app.models.card import Card
+from app.models.profile_links import ProfileLink
 from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileOrderUpdate, ProfileResponse, ProfileUpdate, PublicProfileResponse
 from app.core.dependencies import get_current_user
 from uuid import UUID, uuid4
@@ -51,6 +52,9 @@ def get_my_profiles(
 ):    
     profiles = db.query(Profile).filter(Profile.user_id == current_user.user_id).all()
     
+    for profile in profiles:
+        add_link_and_card_counts(profile, db)
+
     return profiles
 
 
@@ -69,6 +73,8 @@ def get_public_profile(profile_id: UUID, db: Session = Depends(get_db)):
 @router.get("/{profile_id}", response_model=ProfileResponse)
 def get_profile(profile_id: UUID, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = validate_profile_user(profile_id, current_user, db)
+    
+    add_link_and_card_counts(profile, db)
     
     return profile
 
@@ -186,3 +192,19 @@ def reorder_profiles(updates: list[ProfileOrderUpdate], db: Session = Depends(ge
     db.commit()
     
     return {"message": "Profiles reordered successfully"}
+
+
+# Helper function to get link and card counts for profiles
+# def get_profile_counts(profiles, db):
+#     for profile in profiles:
+#         link_count = db.query(Card).filter(Card.profile_id == profile.profile_id).count()
+#         card_count = db.query(Card).filter(Card.profile_id == profile.profile_id).count()
+        
+#     return {link_count, card_count}
+
+
+def add_link_and_card_counts(profile, db):
+    profile.link_count = db.query(ProfileLink).filter(ProfileLink.profile_id == profile.profile_id).count()
+    profile.card_count = db.query(Card).filter(Card.profile_id == profile.profile_id).count()
+    
+    return profile
