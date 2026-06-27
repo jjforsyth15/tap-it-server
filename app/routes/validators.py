@@ -1,3 +1,4 @@
+from app.models.user import User
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.card import Card
@@ -10,7 +11,7 @@ from app.schemas.profile import ProfileCreate
 
 
 # validate user authorization for profile access
-def validate_profile_user(profile_id: UUID, current_user, db: Session):
+def validate_profile_user(profile_id: UUID, current_user: User, db: Session):
     profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
     
     if not profile:
@@ -41,15 +42,15 @@ def validate_profile_data(profile_data: ProfileCreate):
 # validate card data for create
 def validate_card_data(card_data: CardCreate):
     errors = []
-    
-    if not card_data.profile_id:
-        errors.append("Missing profile id")
         
     if not card_data.card_name:
         errors.append("Missing card name")
         
     if len(card_data.card_name) > 50:
         errors.append("Card name must be 50 characters or less")
+        
+    if len(card_data.card_name) < 1:
+        errors.append("Card name must be at least 1 character")
     
     return errors
 
@@ -81,8 +82,16 @@ def validate_link_in_db(link_id: UUID, db: Session):
 
 
 # validate card exists in database
-def validate_card_in_db(card_code: str, db: Session):
+def validate_card_code_in_db(card_code: str, db: Session):
     card = db.query(Card).filter(Card.card_code == card_code).first()
+    
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    return card
+
+def validate_card_id_in_db(card_id: UUID, db: Session):
+    card = db.query(Card).filter(Card.card_id == card_id).first()
     
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
@@ -104,3 +113,13 @@ def validate_card_status(status_data: CardStatusUpdate):
     
     return True
     
+
+# validate card belongs to profile and user
+def validate_card_profile_user(card_id: UUID, profile_id: UUID, current_user: User, db: Session):
+    valid_card = validate_card_id_in_db(card_id, db)
+    profile = validate_profile_user(profile_id, current_user, db)
+    
+    if valid_card.profile_id != profile.profile_id:
+        raise HTTPException(status_code=403, detail="Card does not belong to the specified profile")
+    
+    return valid_card, profile
