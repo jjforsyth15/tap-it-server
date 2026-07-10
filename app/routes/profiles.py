@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.profile import Profile, ProfileStatus
-from app.models.card import Card
+from app.models.card import Card, CardStatus
 from app.models.profile_links import ProfileLink
 from app.schemas.profile import ProfileCreate, ProfileCreateResponse, ProfileOrderUpdateRequest, ProfileOrderUpdateRequest, ProfileResponse, ProfileUpdate, PublicProfileResponse
 from app.core.dependencies import get_current_user
@@ -205,6 +205,6 @@ def reorder_profiles(updates: ProfileOrderUpdateRequest, db: Session = Depends(g
 
 def add_link_and_card_counts(profile, db):
     profile.link_count = db.query(ProfileLink).filter(ProfileLink.profile_id == profile.profile_id).count()
-    profile.card_count = db.query(Card).filter(Card.profile_id == profile.profile_id).count()
+    profile.card_count = db.query(Card).filter(Card.profile_id == profile.profile_id, Card.card_status == CardStatus.active).count()
     
     return profile

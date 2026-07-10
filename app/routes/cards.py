@@ -171,7 +171,7 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
 
 
 # Update card - PATCH /cards/{card_id}
-@router.patch("/{card_id}", response_model=CardCreateResponse)
+@router.patch("/{card_id}", response_model=CardAdjustmentResponse)
 def update_card(card_id: UUID, card_data: CardUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     
     card = validate_card_id_in_db(card_id, db)
@@ -182,6 +182,9 @@ def update_card(card_id: UUID, card_data: CardUpdate, current_user: User = Depen
     
     for field, value in update_data.items():
         setattr(card, field, value)
+        
+    # if card_data.card_status == CardStatus.deactivated or card_data.card_status == CardStatus.lost:
+    #     card.profile_id = None
     
     db.commit()
     db.refresh(card)
