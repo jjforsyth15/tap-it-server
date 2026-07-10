@@ -52,4 +52,4 @@ class User(Base):
     )
     
     profiles = relationship("Profile", back_populates="user", cascade="all, delete-orphan")
-    
+    beta_feedback = relationship("BetaFeedback", back_populates="user", passive_deletes=True)
