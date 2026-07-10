@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate, CardUpdate, PublicCardResponse
+from app.schemas.card import CardAdjustmentResponse, CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate, CardUpdate, PublicCardResponse, CardActivateRequest
 from uuid import UUID
 from app.models.profile import Profile
 from app.models.card_tap import CardTap
@@ -95,26 +95,37 @@ def get_cards_by_profile(
     ):
         profile = validate_profile_user(profile_id, current_user, db)
         
-        cards = db.query(Card).filter(Card.profile_id == profile_id, Card.card_status == CardStatus.active).all()
+        cards = db.query(Card).filter(Card.profile_id == profile_id).all()
         
         return cards
     
+@router.get("/profile/{profile_id}/active", response_model=list[CardResponse])
+def get_active_cards_by_profile(
+    profile_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    profile = validate_profile_user(profile_id, current_user, db)
+    
+    cards = db.query(Card).filter(Card.profile_id == profile_id, Card.card_status == "active").all()
+    
+    return cards
+    
 
 # Activate card - PATCH /cards/{card_code}/activate    
-@router.patch("/{card_code}/activate")
-def activate_card(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    card = validate_card_code_in_db(card_code, db)
-
-    profile = validate_profile_user(card.profile_id, current_user, db)
-    
-    if not card.profile_id:
-        raise HTTPException(status_code=400, detail="Card is not assigned to a profile")
+@router.patch("/{card_code}/activate", response_model=CardAdjustmentResponse)
+def activate_card(request_data: CardActivateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    card = validate_card_code_in_db(request_data.card_code, db)
     
     if card.card_status == "active":
         raise HTTPException(status_code=400, detail="Card is already active")
     
     if card.card_status in ["lost", "deactivated", "disabled"]:
         raise HTTPException(status_code=403, detail="This card cannot be activated. Please contact support.")
+    
+    if not card.profile_id:
+        profile = validate_profile_user(request_data.new_profile_id, current_user, db)
+        card.profile_id = request_data.new_profile_id
+    else:
+        validate_profile_user(card.profile_id, current_user, db)
     
     card.card_status = CardStatus.active
     card.activated_at = datetime.now()
@@ -125,9 +136,7 @@ def activate_card(card_code: str, current_user: User = Depends(get_current_user)
     
     return {
         "message": "Card activated successfully",
-        "card_name": card.card_name,
-        "card_status": card.card_status,
-        "profile_id": card.profile_id
+        "card": card
         }
     
 
@@ -188,8 +197,9 @@ def update_card(card_id: UUID, card_data: CardUpdate, current_user: User = Depen
 def get_card_activation_info(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_code_in_db(card_code, db)
     
-    if card.profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to activate this card")
+    if card.profile_id:
+        if card.profile.user_id != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to activate this card")
     
     if card.card_status == "active":
         raise HTTPException(status_code=400, detail="Card is already active")
@@ -202,6 +212,7 @@ def get_card_activation_info(card_code: str, current_user: User = Depends(get_cu
         "card_code": card.card_code,
         "card_name": card.card_name,
         "card_status": card.card_status,
+        "profile_id": card.profile_id,
         "can_activate": True
     }
     

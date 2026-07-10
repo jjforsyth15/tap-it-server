@@ -39,3 +39,13 @@ class PublicCardResponse(BaseModel):
     card_status: CardStatus
     profile_id: UUID | None = None
     
+    
+class CardAdjustmentResponse(BaseModel):
+    message: str
+    card: CardResponse
+    
+
+class CardActivateRequest(BaseModel):
+    card_code: str
+    new_profile_id: UUID | None = None
+    
