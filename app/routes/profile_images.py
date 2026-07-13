@@ -7,7 +7,7 @@ from app.services.supabase_storage import upload_avatar
 from app.routes.validators import validate_profile_user
 from uuid import UUID
 
-router = APIRouter(prefix="/profiles", tags=["Profile Images"])
+router = APIRouter(prefix="/profile_images", tags=["Profile Images"])
 
 # Upload profile avatar - POST /profiles/{profile_id}/avatar
 @router.post("/{profile_id}/avatar")
