@@ -1,21 +1,27 @@
-from pydantic import BaseModel, HttpUrl, field_validator
+from urllib.parse import urlparse
+from pydantic import BaseModel, HttpUrl, field_validator, Field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional
 
 
 class ProfileLinkCreate(BaseModel):
-    label: str
-    url: HttpUrl
+    label: str = Field(min_length=1, max_length=255)
+    url: str = Field(min_length=1, max_length=2048)
     
     @field_validator("url", mode="before")
-    @classmethod
-    def empty_string_to_none(cls, value):
-        if value == "":
-            return ValueError("URL cannot be empty")
+    @classmethod       
+    def validate_url(cls, value: str) -> str:
+        if not isinstance(value, str):
+            raise ValueError("URL must begin with http:// or https://")
         
-        return value
-    
+        value = value.strip()
+        parsed_url = urlparse(value)
+        
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("Invalid URL format. Must start with http:// or https://")
+        
+        return value    
     
 class ProfileLinkResponse(BaseModel):
     link_id: UUID

@@ -26,7 +26,7 @@ def create_profile_link(
     new_link = ProfileLink(
         profile_id=profile_id,
         label=link_data.label,
-        url=str(link_data.url)
+        url=link_data.url
     )
     
     db.add(new_link)
