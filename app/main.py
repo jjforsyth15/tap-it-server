@@ -24,6 +24,7 @@ app.add_middleware(
         FRONTEND_URL,
         FRONTEND_URL_IP,
         "https://tapitcard.org",
+        "https://www.tapitcard.org",
         "https://tapit-8386d.web.app",
     ],
     allow_credentials=True,
