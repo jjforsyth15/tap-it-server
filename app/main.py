@@ -12,14 +12,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TEAM_ID = os.getenv("TEAM_ID")
+CURRENT_URL = os.getenv("CURRENT_URL")
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+FRONTEND_URL_IP = os.getenv("FRONTEND_URL_IP")
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        FRONTEND_URL,
+        FRONTEND_URL_IP,
     ],
     allow_credentials=True,
     allow_methods=["*"],
