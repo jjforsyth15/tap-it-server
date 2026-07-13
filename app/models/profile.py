@@ -62,4 +62,4 @@ class Profile(Base):
     
     user = relationship("User", back_populates="profiles")
     cards = relationship("Card", back_populates="profile")
-    links = relationship("ProfileLink", back_populates="profile", cascade="all, delete-orphan")
+    links = relationship("ProfileLink", back_populates="profile", cascade="all, delete-orphan", order_by="ProfileLink.display_order.asc()")
