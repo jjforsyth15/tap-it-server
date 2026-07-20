@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import beta, cards, profile_images
@@ -8,6 +8,9 @@ from app.routes import users
 from app.routes import analytics
 from app.routes import profile_links
 import os
+import logging
+import time
+from uuid import uuid4
 from dotenv import load_dotenv 
 
 load_dotenv()
@@ -17,6 +20,9 @@ FRONTEND_URL = os.getenv("FRONTEND_URL")
 FRONTEND_URL_IP = os.getenv("FRONTEND_URL_IP")
 
 app = FastAPI()
+
+logger = logging.getLogger("tapit.requests")
+logger.setLevel(logging.INFO)
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,3 +73,62 @@ async def apple_app_site_association():
         },
         media_type="application/json"
     )
+    
+
+def get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-Forwarded-For")
+    
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    
+    if request.client:
+        return request.client.host
+    
+    return "unknown"
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    
+    request_id = str(uuid4())
+    start_time = time.perf_counter()
+    
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("user-agent", "unknown")
+    referrer = request.headers.get("referer", "none")
+    
+    try:
+        response = await call_next(request)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        
+        logger.info(
+            "Request ID: %s | Method: %s | Path: %s | Status: %d | Duration: %s ms | Client IP: %s | Referrer: %s | User-Agent: %s",
+            request_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            client_ip,
+            referrer,
+            user_agent
+        )
+        
+        response.headers["X-Request-ID"] = request_id
+        
+        return response
+        
+    except Exception:
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        
+        logger.exception(
+            "Request ID: %s | Method: %s | Path: %s | Status: 500 | Duration: %s ms | Client IP: %s | Referrer: %s | User-Agent: %s",
+            request_id,
+            request.method,
+            request.url.path,
+            duration_ms,
+            client_ip,
+            referrer,
+            user_agent
+        )
+        raise
