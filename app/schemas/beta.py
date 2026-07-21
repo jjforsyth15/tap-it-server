@@ -1,5 +1,4 @@
-from app.models.card import CardStatus
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
 from app.models.beta_feedback import FeedbackType, FeedbackStatus

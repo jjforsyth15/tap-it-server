@@ -1,20 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import RedirectResponse
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.card import Card, CardStatus
+from app.models.card import Card
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate
 from uuid import UUID
 from app.models.profile import Profile
-from app.models.card_tap import CardTap
-from uuid import uuid4
-import string
-import random
-import os
-from datetime import datetime
 
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
