@@ -12,13 +12,10 @@ from app.schemas.profile import ProfileCreate
 
 # validate user authorization for profile access
 def validate_profile_user(profile_id: UUID, current_user: User, db: Session):
-    profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
+    profile = db.query(Profile).filter(Profile.profile_id == profile_id, Profile.user_id == current_user.user_id).first()
     
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
-    
-    if profile.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to modify this profile")
     
     return profile
 
