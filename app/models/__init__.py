@@ -4,3 +4,12 @@ from app.models.card import Card
 from app.models.card_tap import CardTap
 from app.models.profile_links import ProfileLink
 from app.models.beta_feedback import BetaFeedback
+
+__all__ = [
+    "User",
+    "Profile",
+    "Card",
+    "CardTap",
+    "ProfileLink",
+    "BetaFeedback"
+]

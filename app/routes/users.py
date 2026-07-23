@@ -1,13 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from uuid import uuid4
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auth import UserRegister, UserLogin
-from app.core.auth import hash_password, verify_password, create_access_token
 from app.core.dependencies import get_current_user
-from app.routes.validators import validate_register_data
 from app.schemas.user import UserUpdate, UserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -30,10 +25,14 @@ def update_current_user(
     
     for key, value in update_data.items():
         setattr(current_user, key, value)
-        
-    db.commit()
-    db.refresh(current_user)
     
+    try:
+        db.commit()
+        db.refresh(current_user)    
+    except Exception:
+        db.rollback()
+        raise
+
     return current_user
 
 
@@ -45,6 +44,10 @@ def delete_current_user(
 ):
     current_user.is_active = False
     
-    db.commit()
-    
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     return {"message": "User account deactivated successfully"}

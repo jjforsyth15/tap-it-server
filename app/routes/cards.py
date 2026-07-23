@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.card import CardAdjustmentResponse, CardCreate, CardResponse, CardCreateResponse, CardStatusUpdate, CardUpdate, PublicCardResponse, CardActivateRequest
+from app.schemas.card import CardAdjustmentResponse, CardCreate, CardResponse, CardCreateResponse, CardUpdate, PublicCardResponse, CardActivateRequest
 from uuid import UUID
 from app.models.profile import Profile
 from app.models.card_tap import CardTap
@@ -14,28 +14,29 @@ import string
 import random
 import os
 from datetime import datetime
-from app.routes.validators import validate_profile_user, validate_card_data, validate_card_code_in_db, validate_card_id_in_db, validate_card_status, validate_card_profile_user
+from app.routes.validators import validate_profile_user, validate_card_data, validate_card_code_in_db, validate_card_id_in_db
+from app.core.rate_limiter import limiter
 
 url = os.getenv("CURRENT_URL")
 frontend_url = os.getenv("FRONTEND_URL")
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
-# Get all cards for the current user - GET /cards
+# Get all cards for the current user - GET /cards - protected route
 @router.get("", response_model=list[CardResponse])
 def get_user_cards(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     
     cards = db.query(Card).filter(Card.user_id == current_user.user_id).order_by(Card.created_at.desc()).all()
     return cards
 
-# Get public card info - GET /cards/{card_code}/public
+# Get public card info - GET /cards/{card_code}/public - public route
 @router.get("/{card_code}/public", response_model=PublicCardResponse)
 def get_public_card_info(card_code: str, db: Session = Depends(get_db)):
     card = validate_card_code_in_db(card_code, db)
 
     return card
 
-# Get card by card code - GET /cards/{card_code}
+# Get card by card code - GET /cards/{card_code} - public route
 @router.get("/{card_code}")
 def get_card(card_code: str, db: Session = Depends(get_db)):
     card = validate_card_code_in_db(card_code, db)
@@ -46,7 +47,12 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
     if card.card_status == "active":
         new_tap = CardTap(card_id=card.card_id)
         db.add(new_tap)
-        db.commit()
+        
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
         return RedirectResponse(url=f"{frontend_url}/public/{card.profile_id}")
     
@@ -56,9 +62,10 @@ def get_card(card_code: str, db: Session = Depends(get_db)):
     raise HTTPException(status_code=400, detail="Invalid card status")
 
 
-# Create new card - POST /cards/create_card
+# Create new card - POST /cards/create_card - protected route
 @router.post("/create_card", response_model=CardCreateResponse)
-def create_card(card_data: CardCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("10/hour")
+def create_card(request: Request, card_data: CardCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     
     errors = validate_card_data(card_data)
     if errors:
@@ -79,8 +86,12 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
     )
     
     db.add(new_card)
-    db.commit()
-    db.refresh(new_card)
+    try:
+        db.commit()
+        db.refresh(new_card)
+    except Exception:
+        db.rollback()
+        raise
     
     return {
         "message": "Card created successfully", 
@@ -88,31 +99,33 @@ def create_card(card_data: CardCreate, current_user: User = Depends(get_current_
         }
 
 
-# Get all cards for a profile - GET /cards/profile/{profile_id}
+# Get all cards for a profile - GET /cards/profile/{profile_id} - protected route
 @router.get("/profile/{profile_id}", response_model=list[CardResponse])
 def get_cards_by_profile(
     profile_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
     ):
-        profile = validate_profile_user(profile_id, current_user, db)
+        validate_profile_user(profile_id, current_user, db)
         
         cards = db.query(Card).filter(Card.profile_id == profile_id).all()
         
         return cards
     
+# Get active cards for a profile - GET /cards/profile/{profile_id}/active - protected route
 @router.get("/profile/{profile_id}/active", response_model=list[CardResponse])
 def get_active_cards_by_profile(
     profile_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    profile = validate_profile_user(profile_id, current_user, db)
+    validate_profile_user(profile_id, current_user, db)
     
     cards = db.query(Card).filter(Card.profile_id == profile_id, Card.card_status == "active").all()
     
     return cards
     
 
-# Activate card - PATCH /cards/{card_code}/activate    
+# Activate card - PATCH /cards/{card_code}/activate - protected route
 @router.patch("/{card_code}/activate", response_model=CardAdjustmentResponse)
-def activate_card(request_data: CardActivateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def activate_card(request: Request, request_data: CardActivateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_code_in_db(request_data.card_code, db)
     
     if card.card_status == "active":
@@ -122,7 +135,7 @@ def activate_card(request_data: CardActivateRequest, current_user: User = Depend
         raise HTTPException(status_code=403, detail="This card cannot be activated. Please contact support.")
     
     if not card.profile_id:
-        profile = validate_profile_user(request_data.new_profile_id, current_user, db)
+        validate_profile_user(request_data.new_profile_id, current_user, db)
         card.profile_id = request_data.new_profile_id
     else:
         validate_profile_user(card.profile_id, current_user, db)
@@ -131,16 +144,20 @@ def activate_card(request_data: CardActivateRequest, current_user: User = Depend
     card.activated_at = datetime.now()
     card.updated_at = datetime.now()
     
-    db.commit()
-    db.refresh(card)
-    
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
     return {
         "message": "Card activated successfully",
         "card": card
         }
     
 
-# swap card's profile - PATCH /cards/{card_id}/profile/{profile_id}
+# swap card's profile - PATCH /cards/{card_id}/profile/{profile_id} - protected route
 @router.patch("/{card_id}/profile/{profile_id}")
 def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_id_in_db(card_id, db)
@@ -159,9 +176,13 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
     card.profile_id = profile_id
     card.updated_at = datetime.now()
     
-    db.commit()
-    db.refresh(card)
-    
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
     return {
         "message": "Card profile updated successfully",
         "card_name": card.card_name,
@@ -170,7 +191,7 @@ def swap_card_profile(card_id: str, profile_id: str, current_user: User = Depend
         }
 
 
-# Update card - PATCH /cards/{card_id}
+# Update card - PATCH /cards/{card_id} - protected route
 @router.patch("/{card_id}", response_model=CardAdjustmentResponse)
 def update_card(card_id: UUID, card_data: CardUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     
@@ -182,20 +203,21 @@ def update_card(card_id: UUID, card_data: CardUpdate, current_user: User = Depen
     
     for field, value in update_data.items():
         setattr(card, field, value)
-        
-    # if card_data.card_status == CardStatus.deactivated or card_data.card_status == CardStatus.lost:
-    #     card.profile_id = None
     
-    db.commit()
-    db.refresh(card)
-    
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
     return {
         "message": "Card updated successfully",
         "card": card
         }
     
 
-# Get card activation info - GET /cards/{card_code}/activation_info
+# Get card activation info - GET /cards/{card_code}/activation_info - protected route
 @router.get("/{card_code}/activation_info")
 def get_card_activation_info(card_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_code_in_db(card_code, db)
@@ -219,7 +241,7 @@ def get_card_activation_info(card_code: str, current_user: User = Depends(get_cu
         "can_activate": True
     }
     
-# Assign card to profile - PATCH /cards/{card_id}/assign_profile
+# Assign card to profile - PATCH /cards/{card_id}/assign_profile - protected route
 @router.patch("/{card_id}/assign_profile", response_model=CardCreateResponse)
 def assign_card_to_profile(card_id: UUID, profile_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_id_in_db(card_id, db)
@@ -228,31 +250,39 @@ def assign_card_to_profile(card_id: UUID, profile_id: UUID, current_user: User =
     card.profile_id = profile_id
     
     card.updated_at = datetime.now()
-    db.commit()
-    db.refresh(card)
-    
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
     return {
         "message": f"Card assigned to profile {profile.profile_name} successfully",
         "card": card
     }
 
 
-# Deactivate card - DELETE /cards/{card_id}
+# Deactivate card - DELETE /cards/{card_id} - protected route
 @router.patch("/{card_id}/deactivate")
 def deactivate_card(card_id: UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     card = validate_card_id_in_db(card_id, db)
-    profile = validate_profile_user(card.profile_id, current_user, db)
+    validate_profile_user(card.profile_id, current_user, db)
     
     card.card_status = CardStatus.deactivated
     card.updated_at = datetime.now()
     
-    db.commit()
-    db.refresh(card)
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
         
     return {"message": f"Card {card.card_name} deactivated successfully"}
 
 
-# helper function - generate unique card code
+# helper function - generate unique card code 
 def generate_card_code(db: Session, length=8):
     characters = string.ascii_uppercase + string.digits
     

@@ -1,17 +1,19 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.core.dependencies import get_current_user
-from app.models.profile import Profile
 from app.services.supabase_storage import upload_avatar
 from app.routes.validators import validate_profile_user
 from uuid import UUID
+from app.core.rate_limiter import limiter
 
 router = APIRouter(prefix="/profile_images", tags=["Profile Images"])
 
-# Upload profile avatar - POST /profiles/{profile_id}/avatar
+# Upload profile avatar - POST /profiles/{profile_id}/avatar - protected route
 @router.post("/{profile_id}/avatar")
+@limiter.limit("5/hour")
 async def upload_profile_avatar(
+    request: Request,
     profile_id: UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -45,15 +47,19 @@ async def upload_profile_avatar(
     )
     
     profile.profile_image_url = public_url
-    db.commit()
-    db.refresh(profile)
+    try:
+        db.commit()
+        db.refresh(profile)
+    except Exception:
+        db.rollback()
+        raise
     
     return {
         "message": "Profile avatar uploaded successfully",
         "profile": profile
     }
     
-
+# Delete profile avatar - DELETE /profiles/{profile_id}/avatar - protected route
 @router.delete("/{profile_id}/avatar")
 def delete_profile_avatar(
     profile_id: UUID,
@@ -66,8 +72,13 @@ def delete_profile_avatar(
         raise HTTPException(status_code=400, detail="No avatar to delete.")
     
     profile.profile_image_url = None
-    db.commit()
-    db.refresh(profile)
+    
+    try:
+        db.commit()
+        db.refresh(profile)
+    except Exception:
+        db.rollback()
+        raise
     
     return {
         "message": "Profile avatar deleted successfully",
