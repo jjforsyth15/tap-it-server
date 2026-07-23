@@ -119,13 +119,9 @@ app.add_middleware(
     allow_origins=[
         FRONTEND_URL,
         FRONTEND_URL_IP,
-<<<<<<< HEAD
         "https://tapitcard.org",
         "https://www.tapitcard.org",
         "https://tapit-8386d.web.app",
-=======
-        "http://localhost:4173",
->>>>>>> develop
     ],
     allow_credentials=True,
     allow_methods=["*"],
