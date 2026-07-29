@@ -7,6 +7,7 @@ from app.routes import profiles
 from app.routes import users
 from app.routes import analytics
 from app.routes import profile_links
+from app.routes.admin import admin_dashboard
 import os
 import logging
 import time
@@ -134,6 +135,7 @@ app.include_router(profile_links.router)
 app.include_router(users.router)
 app.include_router(profile_images.router)
 app.include_router(beta.router)
+app.include_router(admin_dashboard.router)
 
 @app.get("/")
 def root():

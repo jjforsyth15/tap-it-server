@@ -1,12 +1,13 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.auth import SECRET_KEY, ALGORITHM
 from app.database import get_db
-from app.models.user import User, UserType
 from app.models.user import User
+from app.models.user import User
+from app.models.enums import UserType
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -48,6 +49,6 @@ def get_current_user_optional(token: str | None = Depends(oauth2_scheme_optional
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.user_type != UserType.ADMIN:
-        raise HTTPException(status_code=403, detail="Administrator access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator access required")
     
     return current_user
