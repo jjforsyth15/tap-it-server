@@ -3,14 +3,9 @@ from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-import enum
+from app.models.enums import UserType
 
 from app.db.base import Base
-
-class UserType(str, enum.Enum):
-    ADMIN = "admin"
-    USER = "user"
-    SYSTEM = "system"
 
 class User(Base):
     __tablename__ = "users"
