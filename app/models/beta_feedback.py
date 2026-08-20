@@ -4,20 +4,8 @@ from datetime import datetime
 from sqlalchemy import String, ForeignKey, Text, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from app.models.enums import FeedbackType, FeedbackStatus
 from app.db.base import Base 
-
-
-class FeedbackType(enum.Enum):
-    bug = "bug"
-    suggestion = "suggestion"
-    other = "other"
-    
-class FeedbackStatus(enum.Enum):
-    open = "open"
-    in_progress = "in_progress"
-    resolved = "resolved"
-    
 
 class BetaFeedback(Base):
     __tablename__ = "beta_feedback"

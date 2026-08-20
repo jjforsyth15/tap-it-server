@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, DateTime, func
+from sqlalchemy import String, Boolean, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.enums import UserType
 
 from app.db.base import Base
 
@@ -44,6 +45,11 @@ class User(Base):
         Boolean(), 
         nullable=False, 
         default=True
+        )
+    user_type: Mapped[UserType] = mapped_column(
+        Enum(UserType, values_callable=lambda enum: [e.value for e in enum]),
+        nullable=False,
+        default=UserType.USER
         )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

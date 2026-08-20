@@ -4,15 +4,10 @@ from datetime import datetime
 from sqlalchemy import Integer, String, ForeignKey, Text, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.enums import ProfileStatus
 
 from app.db.base import Base
 
-
-class ProfileStatus(str, enum.Enum):
-    active = "active"
-    inactive = "inactive"
-    archived = "archived"
-    disabled = "disabled"
 class Profile(Base):
     __tablename__ = "profiles"
     

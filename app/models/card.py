@@ -4,17 +4,10 @@ from datetime import datetime
 from sqlalchemy import String, ForeignKey, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.enums import CardStatus
 
 from app.db.base import Base 
 
-
-class CardStatus(str, enum.Enum):
-    inactive = "inactive"
-    active = "active"
-    deactivated = "deactivated"
-    lost = "lost"
-    disabled = "disabled"
-    
 class Card(Base):
     __tablename__ = "cards"
     
