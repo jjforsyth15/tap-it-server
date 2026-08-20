@@ -236,8 +236,6 @@ All rights reserved.
 This project is currently proprietary and is not licensed for public redistribution or commercial use.
 
 
-<<<<<<< HEAD
-=======
 To run the server:
 1. Open terminal
 2. Run: uvicorn app.main:app --reload
@@ -479,4 +477,3 @@ All rights reserved.
 This project is currently proprietary and is not licensed for public redistribution or commercial use.
 
 
->>>>>>> feature/admin-dashboard
