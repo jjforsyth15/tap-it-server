@@ -1,0 +1,55 @@
+#!/bin/sh
+# Contract review gate: reviews any backend schema file staged in this
+# commit against its frontend counterpart via the tapit-ai CLI.
+#
+# One-time setup after cloning: git config core.hooksPath scripts/hooks
+
+CHANGED=$(git diff --cached --name-only --diff-filter=ACM -- 'app/schemas/*.py')
+
+STEMS=""
+for f in $CHANGED; do
+  name=$(basename "$f" .py)
+  case " $STEMS " in
+    *" $name "*) ;;
+    *) STEMS="$STEMS $name" ;;
+  esac
+done
+
+if [ -z "$STEMS" ]; then
+  exit 0
+fi
+
+AI_TOOLS_DIR="../tap-it-ai-tools"
+if [ ! -d "$AI_TOOLS_DIR" ]; then
+  echo "ERROR: pre-commit contract review requires the sibling tap-it-ai-tools repo at $AI_TOOLS_DIR, but it was not found." >&2
+  echo "Commit blocked. To bypass in an emergency: git commit --no-verify" >&2
+  exit 1
+fi
+
+if ! command -v tapit-ai >/dev/null 2>&1; then
+  echo "ERROR: 'tapit-ai' command not found on PATH. Contract review cannot run." >&2
+  echo "Commit blocked. To bypass in an emergency: git commit --no-verify" >&2
+  exit 1
+fi
+
+FAILED=0
+for stem in $STEMS; do
+  if [ ! -f "../tap-it-web/src/types/$stem.ts" ]; then
+    echo "No frontend counterpart for '$stem' (src/types/$stem.ts not found) - skipping contract review for this file."
+    continue
+  fi
+
+  echo "Reviewing contract: $stem"
+  ( cd "$AI_TOOLS_DIR" && tapit-ai review contracts --file "$stem" )
+  if [ $? -ne 0 ]; then
+    FAILED=1
+  fi
+done
+
+if [ "$FAILED" -ne 0 ]; then
+  echo "" >&2
+  echo "Contract review failed for one or more changed schema files. Commit blocked." >&2
+  exit 1
+fi
+
+exit 0

@@ -142,6 +142,20 @@ uvicorn app.main:app --reload
 
 Additional setup instructions, environment variables, and deployment information are available in the **docs** folder.
 
+### Pre-commit contract review (one-time setup)
+
+This repo runs an AI-powered contract review (via the sibling `tap-it-ai-tools`
+CLI) before any commit that touches `app/schemas`, comparing backend Pydantic
+schemas against frontend TypeScript types in `tap-it-web`. Requires
+`tap-it-ai-tools` cloned as a sibling directory (`../tap-it-ai-tools`) with the
+`tapit-ai` CLI installed and on PATH.
+
+One-time setup after cloning:
+
+```bash
+git config core.hooksPath scripts/hooks
+```
+
 ---
 
 <!-- # Documentation
@@ -382,6 +396,20 @@ uvicorn app.main:app --reload
 ```
 
 Additional setup instructions, environment variables, and deployment information are available in the **docs** folder.
+
+### Pre-commit contract review (one-time setup)
+
+This repo runs an AI-powered contract review (via the sibling `tap-it-ai-tools`
+CLI) before any commit that touches `app/schemas`, comparing backend Pydantic
+schemas against frontend TypeScript types in `tap-it-web`. Requires
+`tap-it-ai-tools` cloned as a sibling directory (`../tap-it-ai-tools`) with the
+`tapit-ai` CLI installed and on PATH.
+
+One-time setup after cloning:
+
+```bash
+git config core.hooksPath scripts/hooks
+```
 
 ---
 
