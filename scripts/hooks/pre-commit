@@ -40,7 +40,7 @@ for stem in $STEMS; do
   fi
 
   echo "Reviewing contract: $stem"
-  ( cd "$AI_TOOLS_DIR" && tapit-ai review contracts --file "$stem" )
+  ( cd "$AI_TOOLS_DIR" && tapit-ai review contracts --file "$stem" --report )
   if [ $? -ne 0 ]; then
     FAILED=1
   fi
