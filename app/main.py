@@ -1,3 +1,7 @@
+import os
+from dotenv import load_dotenv 
+load_dotenv()
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,17 +12,15 @@ from app.routes import users
 from app.routes import analytics
 from app.routes import profile_links
 from app.routes.admin import admin_dashboard
-import os
 import logging
 import time
 from uuid import uuid4
-from dotenv import load_dotenv 
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from app.core.rate_limiter import limiter
 
-load_dotenv()
+
 TEAM_ID = os.getenv("TEAM_ID")
 CURRENT_URL = os.getenv("CURRENT_URL")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
