@@ -26,7 +26,7 @@ class User(Base):
         )
     password_hash: Mapped[str] = mapped_column(
         String(255), 
-        nullable=False
+        nullable=True
         )
     first_name: Mapped[str] = mapped_column(
         String(255), 
@@ -35,6 +35,11 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(
         String(255), 
         nullable=False
+        )
+    google_subject: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=True
         )
     is_verified: Mapped[bool] = mapped_column(
         Boolean(), 
