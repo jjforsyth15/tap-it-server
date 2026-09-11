@@ -1,5 +1,8 @@
+# Environment must be loaded before importing application modules.
+# ruff: noqa: E402
 import os
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, Request
@@ -25,10 +28,12 @@ TEAM_ID = os.getenv("TEAM_ID")
 CURRENT_URL = os.getenv("CURRENT_URL")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
 FRONTEND_URL_IP = os.getenv("FRONTEND_URL_IP")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 required_env_vars = {
     "CURRENT_URL": CURRENT_URL,
     "FRONTEND_URL": FRONTEND_URL,
+    "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
 }
 
 missing = [name for name, value in required_env_vars.items() if not value]
@@ -45,22 +50,23 @@ logger.setLevel(logging.INFO)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     if request.method == "OPTIONS":
         return await call_next(request)
-    
+
     request_id = str(uuid4())
     start_time = time.perf_counter()
-    
+
     client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
     referrer = request.headers.get("referer", "none")
-    
+
     try:
         response = await call_next(request)
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        
+
         logger.info(
             "Request ID: %s | Method: %s | Path: %s | Status: %d | Duration: %s ms | Client IP: %s | Referrer: %s | User-Agent: %s",
             request_id,
@@ -70,16 +76,16 @@ async def log_requests(request: Request, call_next):
             duration_ms,
             client_ip,
             referrer,
-            user_agent
+            user_agent,
         )
-        
+
         response.headers["X-Request-ID"] = request_id
-        
+
         return response
-        
+
     except Exception:
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        
+
         logger.exception(
             "Unexpected application error",
             extra={
@@ -92,15 +98,15 @@ async def log_requests(request: Request, call_next):
                 "user_agent": user_agent,
             },
         )
-        
+
         response = JSONResponse(
             status_code=500,
             content={"detail": "An unexpected error occurred. Please try again later."},
         )
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        
+
         response.headers["X-Request-ID"] = request_id
-        
+
         logger.info(
             "Request ID: %s | Method: %s | Path: %s | Status: %d | Duration: %s ms | Client IP: %s | Referrer: %s | User-Agent: %s",
             request_id,
@@ -110,9 +116,9 @@ async def log_requests(request: Request, call_next):
             duration_ms,
             get_client_ip(request),
             request.headers.get("referer", "none"),
-            request.headers.get("user-agent", "unknown")
+            request.headers.get("user-agent", "unknown"),
         )
-        
+
         return response
 
 
@@ -141,6 +147,7 @@ app.include_router(profile_images.router)
 app.include_router(beta.router)
 app.include_router(admin_dashboard.router)
 
+
 @app.get("/")
 def root():
     return {"message": "TapIt API running"}
@@ -148,12 +155,9 @@ def root():
 
 @app.get("/login")
 def fake_login(next: str | None = None):
-    return {
-        "message": "Login page placeholder",
-        "next": next
-    }
-    
-    
+    return {"message": "Login page placeholder", "next": next}
+
+
 @app.get("/.well-known/apple-app-site-association")
 async def apple_app_site_association():
     return JSONResponse(
@@ -163,23 +167,22 @@ async def apple_app_site_association():
                 "details": [
                     {
                         "appIDs": [f"{TEAM_ID}.org.tapitcard.app"],
-                        "components": [{"/": "/cards/*"}]
+                        "components": [{"/": "/cards/*"}],
                     }
-                ]
+                ],
             }
         },
-        media_type="application/json"
+        media_type="application/json",
     )
-    
+
 
 def get_client_ip(request: Request) -> str:
     forwarded_for = request.headers.get("x-Forwarded-For")
-    
+
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
-    
+
     if request.client:
         return request.client.host
-    
-    return "unknown"
 
+    return "unknown"
