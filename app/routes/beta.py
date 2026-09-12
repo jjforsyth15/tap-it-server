@@ -11,13 +11,18 @@ from app.core.rate_limiter import limiter
 
 router = APIRouter(prefix="/beta", tags=["beta"])
 
-@router.post("/feedback", response_model=FeedbackCreateResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/feedback",
+    response_model=FeedbackCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 @limiter.limit("10/hour")
 def create_feedback(
     request: Request,
     feedback_data: FeedbackCreateRequest,
     current_user: User | None = Depends(get_current_user_optional),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     new_feedback = BetaFeedback(
         feedback_id=uuid.uuid4(),
@@ -31,17 +36,14 @@ def create_feedback(
         version=feedback_data.version,
         feedback_status=FeedbackStatus.open,
     )
-    
+
     db.add(new_feedback)
-    
+
     try:
         db.commit()
         db.refresh(new_feedback)
     except Exception:
         db.rollback()
         raise
-    
-    return {
-        "message": "Feedback submitted successfully",
-        "feedback": new_feedback
-    }
+
+    return {"message": "Feedback submitted successfully", "feedback": new_feedback}
