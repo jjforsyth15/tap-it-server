@@ -4,5 +4,14 @@ from app.models.card import Card
 from app.models.card_tap import CardTap
 from app.models.profile_links import ProfileLink
 from app.models.beta_feedback import BetaFeedback
+from app.models.email_verification_token import EmailVerificationToken
 
-__all__ = ["User", "Profile", "Card", "CardTap", "ProfileLink", "BetaFeedback"]
+__all__ = [
+    "User",
+    "Profile",
+    "Card",
+    "CardTap",
+    "ProfileLink",
+    "BetaFeedback",
+    "EmailVerificationToken",
+]

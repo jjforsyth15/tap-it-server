@@ -8,6 +8,7 @@ from alembic import context
 import os
 from dotenv import load_dotenv
 from app.db.base import Base
+import app.models  # noqa: F401 -- registers all models on Base.metadata for autogenerate
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
