@@ -5,6 +5,7 @@ from app.models.card_tap import CardTap
 from app.models.profile_links import ProfileLink
 from app.models.beta_feedback import BetaFeedback
 from app.models.email_verification_token import EmailVerificationToken
+from app.models.password_reset_token import PasswordResetToken
 
 __all__ = [
     "User",
@@ -14,4 +15,5 @@ __all__ = [
     "ProfileLink",
     "BetaFeedback",
     "EmailVerificationToken",
+    "PasswordResetToken",
 ]
