@@ -23,11 +23,6 @@ TOKEN_LIFETIME = timedelta(hours=24)
 
 
 def create_verification_token(user: User, db: Session) -> EmailVerificationToken:
-    db.query(EmailVerificationToken).filter(
-        EmailVerificationToken.user_id == user.user_id,
-        EmailVerificationToken.used_at.is_(None),
-    ).delete()
-
     verification_token = EmailVerificationToken(
         user_id=user.user_id,
         token=secrets.token_urlsafe(32),
@@ -90,6 +85,12 @@ def verify_email_token(token: str, db: Session) -> User:
     user = verification_token.user
     user.is_verified = True
     verification_token.used_at = datetime.now(timezone.utc)
+
+    db.query(EmailVerificationToken).filter(
+        EmailVerificationToken.user_id == user.user_id,
+        EmailVerificationToken.token_id != verification_token.token_id,
+        EmailVerificationToken.used_at.is_(None),
+    ).delete()
 
     db.commit()
     db.refresh(user)

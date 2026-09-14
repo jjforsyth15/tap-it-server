@@ -22,12 +22,19 @@ from app.services.email_verification import (
     send_verification_email,
     verify_email_token,
 )
+from app.services.password_reset import (
+    create_reset_token,
+    send_password_reset_email,
+    reset_password as reset_user_password,
+)
 from app.schemas.auth import (
     GoogleLoginRequest,
     UserLoginResponse,
     GoogleUserRegister,
     EmailVerificationRequest,
     ResendVerificationRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from app.services.user import get_user_by_email, normalize_email
 
@@ -203,3 +210,39 @@ def resend_verification(
         "message": "If an account with that email exists and is not yet verified, "
         "a verification email has been sent."
     }
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/hour")
+def forgot_password(
+    request: Request,
+    forgot_password_data: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    user = get_user_by_email(str(forgot_password_data.email), db)
+
+    if user and user.password_hash is not None:
+        token = create_reset_token(user, db)
+
+        try:
+            send_password_reset_email(user, token)
+        except HTTPException:
+            logger.exception(
+                "Failed to send password reset email for user %s", user.user_id
+            )
+
+    return {
+        "message": "If an account with that email exists, a password reset link has been sent."
+    }
+
+
+@router.post("/reset-password")
+@limiter.limit("10/hour")
+def reset_password(
+    request: Request,
+    reset_password_data: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    reset_user_password(reset_password_data.token, reset_password_data.new_password, db)
+
+    return {"message": "Password reset successfully."}
