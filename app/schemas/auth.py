@@ -44,6 +44,14 @@ class GoogleLoginRequest(BaseModel):
     credential: str = Field(min_length=1)
 
 
+class EmailVerificationRequest(BaseModel):
+    token: str = Field(min_length=1)
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
 class GoogleLinkResponse(BaseModel):
     success: bool
     message: str

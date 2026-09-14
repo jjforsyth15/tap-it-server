@@ -130,6 +130,11 @@ def login_user(
     ):
         return None
 
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=403, detail="Please verify your email before logging in."
+        )
+
     access_token = create_access_token(data={"sub": str(user.user_id)})
 
     response = UserLoginResponse(

@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -16,9 +17,21 @@ from app.services.auth import (
     login_google_user,
     link_google_account_service,
 )
-from app.schemas.auth import GoogleLoginRequest, UserLoginResponse, GoogleUserRegister
+from app.services.email_verification import (
+    create_verification_token,
+    send_verification_email,
+    verify_email_token,
+)
+from app.schemas.auth import (
+    GoogleLoginRequest,
+    UserLoginResponse,
+    GoogleUserRegister,
+    EmailVerificationRequest,
+    ResendVerificationRequest,
+)
 from app.services.user import get_user_by_email, normalize_email
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -39,7 +52,20 @@ def register(request: Request, user_data: UserRegister, db: Session = Depends(ge
 
     new_user = create_new_user(user_data, db)
 
-    return {"message": "User registered successfully", "email": new_user.email}
+    verification_token = create_verification_token(new_user, db)
+
+    try:
+        send_verification_email(new_user, verification_token.token)
+    except HTTPException:
+        logger.exception(
+            "Failed to send verification email during registration for user %s",
+            new_user.user_id,
+        )
+
+    return {
+        "message": "User registered successfully. Please check your email to verify your account.",
+        "email": new_user.email,
+    }
 
 
 # User login - POST /auth/login
@@ -140,3 +166,40 @@ def link_google_account(
         raise HTTPException(status_code=400, detail=response.message)
 
     return response
+
+
+@router.post("/verify-email")
+@limiter.limit("10/hour")
+def verify_email(
+    request: Request,
+    verification_data: EmailVerificationRequest,
+    db: Session = Depends(get_db),
+):
+    verify_email_token(verification_data.token, db)
+
+    return {"message": "Email verified successfully."}
+
+
+@router.post("/resend-verification")
+@limiter.limit("3/hour")
+def resend_verification(
+    request: Request,
+    resend_data: ResendVerificationRequest,
+    db: Session = Depends(get_db),
+):
+    user = get_user_by_email(str(resend_data.email), db)
+
+    if user and not user.is_verified:
+        verification_token = create_verification_token(user, db)
+
+        try:
+            send_verification_email(user, verification_token.token)
+        except HTTPException:
+            logger.exception(
+                "Failed to resend verification email for user %s", user.user_id
+            )
+
+    return {
+        "message": "If an account with that email exists and is not yet verified, "
+        "a verification email has been sent."
+    }
