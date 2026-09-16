@@ -62,10 +62,6 @@ def validate_card_data(card_data: CardCreate):
 def validate_register_data(user_data: UserRegister):
     errors = []
 
-    if not user_data.email:
-        errors.append("Missing email")
-    if not user_data.password:
-        errors.append("Missing password")
     if not user_data.first_name:
         errors.append("Missing first name")
     if not user_data.last_name:

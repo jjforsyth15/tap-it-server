@@ -1,5 +1,21 @@
-from pydantic import BaseModel, EmailStr, Field, model_validator
+import re
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from app.models.user import UserType
+
+
+def validate_password_complexity(password: str) -> str:
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    if not re.search(r"[A-Z]", password):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not re.search(r"[a-z]", password):
+        raise ValueError("Password must contain at least one lowercase letter")
+    if not re.search(r"\d", password):
+        raise ValueError("Password must contain at least one number")
+    if not re.search(r"[^A-Za-z0-9]", password):
+        raise ValueError("Password must contain at least one special character")
+    return password
 
 
 class UserRegister(BaseModel):
@@ -8,6 +24,11 @@ class UserRegister(BaseModel):
     first_name: str
     last_name: str
     user_type: UserType = UserType.USER
+
+    @field_validator("password")
+    @classmethod
+    def check_password_complexity(cls, value: str) -> str:
+        return validate_password_complexity(value)
 
 
 class GoogleUserRegister(BaseModel):
@@ -58,7 +79,12 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=1)
-    new_password: str = Field(min_length=8)
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def check_password_complexity(cls, value: str) -> str:
+        return validate_password_complexity(value)
 
 
 class GoogleLinkResponse(BaseModel):
