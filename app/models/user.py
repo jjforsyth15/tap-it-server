@@ -43,3 +43,6 @@ class User(Base):
     password_reset_tokens = relationship(
         "PasswordResetToken", back_populates="user", cascade="all, delete-orphan"
     )
+    email_change_tokens = relationship(
+        "EmailChangeToken", back_populates="user", cascade="all, delete-orphan"
+    )
