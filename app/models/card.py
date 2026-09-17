@@ -26,7 +26,6 @@ class Card(Base):
     )
     card_name: Mapped[str] = mapped_column(String(255), nullable=False)
     card_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
-    pointing_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     card_status: Mapped[CardStatus] = mapped_column(
         Enum(CardStatus, name="card_status"),
         nullable=False,

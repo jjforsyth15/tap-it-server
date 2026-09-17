@@ -18,7 +18,6 @@ class CardResponse(BaseModel):
     profile_id: UUID | None = None
     card_name: str
     card_code: str
-    pointing_url: str
     card_status: CardStatus
     created_at: datetime
     activated_at: datetime | None = None
@@ -50,7 +49,6 @@ class CardAdjustmentResponse(BaseModel):
 
 
 class CardActivateRequest(BaseModel):
-    card_code: str
     new_profile_id: UUID | None = None
 
 
