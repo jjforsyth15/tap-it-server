@@ -432,6 +432,8 @@ Rate-limited endpoints should be tested to confirm:
 * The response is valid JSON.
 * The application handles the response gracefully.
 * Legitimate users are not blocked during ordinary use.
+* In production, a caller-supplied `X-Forwarded-For` value does not change the rate-limit key.
+* Requests from two different real networks receive independent rate-limit buckets.
 
 Current rate-limited operations may include:
 
@@ -474,6 +476,11 @@ Review backend logs and confirm requests include useful diagnostic data such as:
 * Client IP
 * User agent
 * Referrer where available
+
+In production, confirm the logged client IP matches Cloudflare's protected connecting-IP value and cannot be changed by
+supplying a custom `X-Forwarded-For` header. TapIt's `tapit.requests` logger is the authoritative request log; Uvicorn's
+access logger is disabled because Render's default wildcard forwarded-header trust makes its client-address field
+caller-controlled.
 
 For unexpected server errors, confirm logs include enough context to investigate the problem without exposing sensitive values.
 

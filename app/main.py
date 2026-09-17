@@ -21,6 +21,7 @@ from uuid import uuid4
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
+from app.core.client_ip import get_client_ip
 from app.core.rate_limiter import limiter
 
 
@@ -46,6 +47,11 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tapit.requests")
 logger.setLevel(logging.INFO)
+
+# Render sets FORWARDED_ALLOW_IPS="*", so Uvicorn's access-log client address
+# can be supplied by the caller. TapIt's request logger uses Cloudflare's
+# protected connecting-IP header instead.
+logging.getLogger("uvicorn.access").disabled = True
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -174,15 +180,3 @@ async def apple_app_site_association():
         },
         media_type="application/json",
     )
-
-
-def get_client_ip(request: Request) -> str:
-    forwarded_for = request.headers.get("x-Forwarded-For")
-
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-
-    if request.client:
-        return request.client.host
-
-    return "unknown"
