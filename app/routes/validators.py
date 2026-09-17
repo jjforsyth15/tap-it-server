@@ -26,6 +26,14 @@ def validate_profile_user(profile_id: UUID, current_user: User, db: Session):
     return profile
 
 
+# validate user authorization for card ownership
+def validate_card_user(card: Card, current_user: User):
+    if card.user_id != current_user.user_id:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    return card
+
+
 # validate profile data for create/update
 def validate_profile_data(profile_data: ProfileCreate):
     errors = []
