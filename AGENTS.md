@@ -22,8 +22,11 @@ See the root `tap-it/AGENTS.md` (one directory up) for overall project context, 
 
 ## Known issues (not yet fixed — ask before touching)
 
-- `routes/cards.py`, `swap_card_profile`: the ownership check `if profile_id != current_user.user_id or new_profile.user_id != current_user.user_id` compares a *profile* ID against the current user's *user* ID in its first clause — different UUID spaces, so it will almost always be true and 403 the endpoint. Likely a copy-paste bug. Needs a fix, but confirm with Joe before changing since it may be relied on somewhere unexpected.
 - `requirements.txt` is saved as UTF-16 with CRLF line endings (Windows editor artifact). Harmless for pip but worth normalizing to UTF-8 eventually.
+
+## Fixed (previously tracked here)
+
+- `routes/cards.py`, `swap_card_profile`: the ownership check used to compare a *profile* ID against the current user's *user* ID (`profile_id != current_user.user_id`), which almost always 403'd the endpoint. Fixed in `ececb18` ("separated update card for unique business routes") — the route now calls `validate_card_user(card, current_user)` (checks `card.user_id`, the right ID space) followed by `validate_profile_user(profile_id, current_user, db)`.
 
 ## Current focus (Phase 2A — Administration)
 
