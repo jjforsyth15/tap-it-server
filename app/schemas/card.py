@@ -11,8 +11,6 @@ class CardCreate(BaseModel):
 
 class CardUpdate(BaseModel):
     card_name: str | None = None
-    profile_id: UUID | None = None
-    card_status: CardStatus | None = None
 
 
 class CardResponse(BaseModel):
@@ -53,6 +51,10 @@ class CardAdjustmentResponse(BaseModel):
 
 class CardActivateRequest(BaseModel):
     card_code: str
+    new_profile_id: UUID | None = None
+
+
+class CardReactivateRequest(BaseModel):
     new_profile_id: UUID | None = None
 
 
