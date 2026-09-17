@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
+from app.models.profile import Profile, ProfileStatus
+from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
 from app.core.rate_limiter import limiter
 from app.schemas.user import UserUpdate, UserResponse
@@ -122,6 +124,16 @@ def cancel_email_change_route(
 def delete_current_user(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
+    db.query(Profile).filter(
+        Profile.user_id == current_user.user_id,
+        Profile.profile_status == ProfileStatus.active,
+    ).update({"profile_status": ProfileStatus.inactive}, synchronize_session=False)
+
+    db.query(Card).filter(
+        Card.user_id == current_user.user_id,
+        Card.card_status == CardStatus.active,
+    ).update({"card_status": CardStatus.deactivated}, synchronize_session=False)
+
     current_user.is_active = False
 
     try:
