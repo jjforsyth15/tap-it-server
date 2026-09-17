@@ -1,5 +1,5 @@
 from app.models.card import CardStatus
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from uuid import UUID
 from datetime import datetime
 
@@ -11,6 +11,17 @@ class CardCreate(BaseModel):
 
 class CardUpdate(BaseModel):
     card_name: str | None = None
+
+    @field_validator("card_name")
+    @classmethod
+    def validate_card_name(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("card_name cannot be null")
+        if not value:
+            raise ValueError("Card name must be at least 1 character")
+        if len(value) > 50:
+            raise ValueError("Card name must be 50 characters or less")
+        return value
 
 
 class CardResponse(BaseModel):
@@ -56,6 +67,3 @@ class CardReactivateRequest(BaseModel):
     new_profile_id: UUID | None = None
 
 
-class CardAdjustmentResponse(BaseModel):
-    message: str
-    card: CardResponse
