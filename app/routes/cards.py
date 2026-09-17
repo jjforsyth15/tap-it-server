@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.card import Card, CardStatus
 from app.core.dependencies import get_current_user
+from app.models.enums import ProfileStatus
 from app.models.user import User
 from app.schemas.card import (
     CardAdjustmentResponse,
@@ -13,9 +14,9 @@ from app.schemas.card import (
     CardUpdate,
     PublicCardResponse,
     CardActivateRequest,
+    CardReactivateRequest,
 )
 from uuid import UUID
-from app.models.profile import Profile
 from app.models.card_tap import CardTap
 from uuid import uuid4
 import string
@@ -27,10 +28,10 @@ from app.routes.validators import (
     validate_card_data,
     validate_card_code_in_db,
     validate_card_id_in_db,
+    validate_card_user,
 )
 from app.core.rate_limiter import limiter
 
-url = os.getenv("CURRENT_URL")
 frontend_url = os.getenv("FRONTEND_URL")
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -109,9 +110,9 @@ def create_card(
     new_card = Card(
         card_id=str(uuid4()),
         profile_id=card_data.profile_id,
+        user_id=current_user.user_id if card_data.profile_id else None,
         card_name=card_data.card_name,
         card_code=card_code,
-        pointing_url=f"{url}/cards/{card_code}",
         card_status=CardStatus.inactive,
     )
 
@@ -163,11 +164,12 @@ def get_active_cards_by_profile(
 @limiter.limit("5/hour")
 def activate_card(
     request: Request,
+    card_code: str,
     request_data: CardActivateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    card = validate_card_code_in_db(request_data.card_code, db)
+    card = validate_card_code_in_db(card_code, db)
 
     if card.card_status == "active":
         raise HTTPException(status_code=400, detail="Card is already active")
@@ -179,10 +181,28 @@ def activate_card(
         )
 
     if not card.profile_id:
-        validate_profile_user(request_data.new_profile_id, current_user, db)
+        if not request_data.new_profile_id:
+            raise HTTPException(
+                status_code=400,
+                detail="A profile must be provided to activate this card",
+            )
+        new_profile = validate_profile_user(request_data.new_profile_id, current_user, db)
+        if new_profile.profile_status != ProfileStatus.active:
+            raise HTTPException(
+                status_code=403, detail="Cannot assign card to a non-active profile"
+            )
+        if card.user_id and card.user_id != current_user.user_id:
+            raise HTTPException(
+                status_code=403, detail="This card is already assigned to another user"
+            )
         card.profile_id = request_data.new_profile_id
+        card.user_id = current_user.user_id
     else:
-        validate_profile_user(card.profile_id, current_user, db)
+        profile = validate_profile_user(card.profile_id, current_user, db)
+        if profile.profile_status != ProfileStatus.active:
+            raise HTTPException(
+                status_code=403, detail="Cannot assign card to a non-active profile"
+            )
 
     card.card_status = CardStatus.active
     card.activated_at = datetime.now()
@@ -198,6 +218,123 @@ def activate_card(
     return {"message": "Card activated successfully", "card": card}
 
 
+# Deactivate card - PATCH /cards/{card_id}/deactivate - protected route
+@router.patch("/{card_id}/deactivate", response_model=CardAdjustmentResponse)
+def deactivate_card(
+    card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    card = validate_card_id_in_db(card_id, db)
+    validate_card_user(card, current_user)
+
+    if card.card_status == CardStatus.deactivated:
+        raise HTTPException(status_code=400, detail="Card is already deactivated")
+
+    if card.card_status != CardStatus.active:
+        raise HTTPException(
+            status_code=403, detail="Only an active card can be deactivated"
+        )
+
+    card.card_status = CardStatus.deactivated
+    card.updated_at = datetime.now()
+
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"message": "Card deactivated successfully", "card": card}
+
+
+# Report card lost - PATCH /cards/{card_id}/report-lost - protected route
+@router.patch("/{card_id}/report-lost", response_model=CardAdjustmentResponse)
+def report_card_lost(
+    card_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    card = validate_card_id_in_db(card_id, db)
+    validate_card_user(card, current_user)
+
+    if card.card_status == CardStatus.lost:
+        raise HTTPException(status_code=400, detail="Card is already reported lost")
+
+    if card.card_status == CardStatus.disabled:
+        raise HTTPException(
+            status_code=403,
+            detail="This card cannot be reported lost. Please contact support.",
+        )
+
+    card.card_status = CardStatus.lost
+    card.updated_at = datetime.now()
+
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"message": "Card reported lost successfully", "card": card}
+
+
+# Reactivate card - PATCH /cards/{card_id}/reactivate - protected route
+@router.patch("/{card_id}/reactivate", response_model=CardAdjustmentResponse)
+def reactivate_card(
+    card_id: UUID,
+    request_data: CardReactivateRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    card = validate_card_id_in_db(card_id, db)
+    validate_card_user(card, current_user)
+
+    if card.card_status == CardStatus.active:
+        raise HTTPException(status_code=400, detail="Card is already active")
+
+    if card.card_status != CardStatus.deactivated:
+        raise HTTPException(
+            status_code=403,
+            detail="Only a deactivated card can be reactivated. Please contact support.",
+        )
+
+    new_profile_id = request_data.new_profile_id if request_data else None
+
+    if not card.profile_id:
+        if not new_profile_id:
+            raise HTTPException(
+                status_code=400,
+                detail="A profile must be provided to reactivate this card",
+            )
+        new_profile = validate_profile_user(new_profile_id, current_user, db)
+        if new_profile.profile_status != ProfileStatus.active:
+            raise HTTPException(
+                status_code=403, detail="Cannot assign card to a non-active profile"
+            )
+        card.profile_id = new_profile_id
+    else:
+        profile = validate_profile_user(card.profile_id, current_user, db)
+        if profile.profile_status != ProfileStatus.active:
+            raise HTTPException(
+                status_code=403, detail="Cannot assign card to a non-active profile"
+            )
+
+    card.card_status = CardStatus.active
+    card.updated_at = datetime.now()
+
+    try:
+        db.commit()
+        db.refresh(card)
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"message": "Card reactivated successfully", "card": card}
+
+
 # swap card's profile - PATCH /cards/{card_id}/profile/{profile_id} - protected route
 @router.patch("/{card_id}/profile/{profile_id}")
 def swap_card_profile(
@@ -208,23 +345,12 @@ def swap_card_profile(
 ):
     card = validate_card_id_in_db(card_id, db)
 
-    new_profile = db.query(Profile).filter(Profile.profile_id == profile_id).first()
+    validate_card_user(card, current_user)
+    new_profile = validate_profile_user(profile_id, current_user, db)
 
-    if not new_profile:
-        raise HTTPException(status_code=404, detail="New profile not found")
-
-    if (
-        profile_id != current_user.user_id
-        or new_profile.user_id != current_user.user_id
-    ):
+    if new_profile.profile_status != ProfileStatus.active:
         raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to assign this card to the new profile",
-        )
-
-    if new_profile.is_active == False:
-        raise HTTPException(
-            status_code=403, detail="Cannot assign card to an inactive profile"
+            status_code=403, detail="Cannot assign card to a non-active profile"
         )
 
     card.profile_id = profile_id
@@ -256,7 +382,7 @@ def update_card(
 
     card = validate_card_id_in_db(card_id, db)
 
-    validate_profile_user(card.profile_id, current_user, db)
+    validate_card_user(card, current_user)
 
     update_data = card_data.model_dump(exclude_unset=True)
 
@@ -287,6 +413,10 @@ def get_card_activation_info(
             raise HTTPException(
                 status_code=403, detail="Not authorized to activate this card"
             )
+    elif card.user_id and card.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to activate this card"
+        )
 
     if card.card_status == "active":
         raise HTTPException(status_code=400, detail="Card is already active")
@@ -304,56 +434,6 @@ def get_card_activation_info(
         "profile_id": card.profile_id,
         "can_activate": True,
     }
-
-
-# Assign card to profile - PATCH /cards/{card_id}/assign_profile - protected route
-@router.patch("/{card_id}/assign_profile", response_model=CardCreateResponse)
-def assign_card_to_profile(
-    card_id: UUID,
-    profile_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    card = validate_card_id_in_db(card_id, db)
-    profile = validate_profile_user(profile_id, current_user, db)
-
-    card.profile_id = profile_id
-
-    card.updated_at = datetime.now()
-    try:
-        db.commit()
-        db.refresh(card)
-    except Exception:
-        db.rollback()
-        raise
-
-    return {
-        "message": f"Card assigned to profile {profile.profile_name} successfully",
-        "card": card,
-    }
-
-
-# Deactivate card - DELETE /cards/{card_id} - protected route
-@router.patch("/{card_id}/deactivate")
-def deactivate_card(
-    card_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    card = validate_card_id_in_db(card_id, db)
-    validate_profile_user(card.profile_id, current_user, db)
-
-    card.card_status = CardStatus.deactivated
-    card.updated_at = datetime.now()
-
-    try:
-        db.commit()
-        db.refresh(card)
-    except Exception:
-        db.rollback()
-        raise
-
-    return {"message": f"Card {card.card_name} deactivated successfully"}
 
 
 # helper function - generate unique card code
