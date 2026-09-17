@@ -29,6 +29,11 @@ def hash_token(token: str) -> str:
 
 
 def create_reset_token(user: User, db: Session) -> str:
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.user_id,
+        PasswordResetToken.used_at.is_(None),
+    ).delete()
+
     token = secrets.token_urlsafe(32)
 
     reset_token = PasswordResetToken(
