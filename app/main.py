@@ -54,8 +54,6 @@ async def log_requests(request: Request, call_next):
     start_time = time.perf_counter()
     
     client_ip = get_client_ip(request)
-    raw_forwarded_for = request.headers.get("x-forwarded-for", "missing")
-    cf_connecting_ip = request.headers.get("cf-connecting-ip", "missing")
     user_agent = request.headers.get("user-agent", "unknown")
     referrer = request.headers.get("referer", "none")
     
@@ -64,21 +62,15 @@ async def log_requests(request: Request, call_next):
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         
         logger.info(
-            (
-                "Request ID: %s | Method: %s | Path: %s | Status: %d | "
-                "Duration: %s ms | Client IP: %s | Raw X-Forwarded-For: %s | "
-                "CF-Connecting-IP: %s | Referrer: %s | User-Agent: %s"
-            ),
+            "Request ID: %s | Method: %s | Path: %s | Status: %d | Duration: %s ms | Client IP: %s | Referrer: %s | User-Agent: %s",
             request_id,
             request.method,
             request.url.path,
             response.status_code,
             duration_ms,
             client_ip,
-            raw_forwarded_for,
-            cf_connecting_ip,
             referrer,
-            user_agent,
+            user_agent
         )
         
         response.headers["X-Request-ID"] = request_id
