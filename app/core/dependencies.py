@@ -34,6 +34,12 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
 
+    # Tokens issued before this claim existed carry no "tv" and are treated as
+    # version 0, matching every existing user's default -- so shipping this
+    # check doesn't retroactively log everyone out.
+    if payload.get("tv", 0) != user.token_version:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     if user.is_active is False:
         raise HTTPException(status_code=403, detail="User account is inactive")
 
@@ -64,6 +70,9 @@ def get_current_user_optional(
     user = db.query(User).filter(User.user_id == user_id).first()
 
     if user is None or user.is_active is False:
+        return None
+
+    if payload.get("tv", 0) != user.token_version:
         return None
 
     return user

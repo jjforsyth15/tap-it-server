@@ -135,7 +135,9 @@ def login_user(
             status_code=403, detail="Please verify your email before logging in."
         )
 
-    access_token = create_access_token(data={"sub": str(user.user_id)})
+    access_token = create_access_token(
+        data={"sub": str(user.user_id), "tv": user.token_version}
+    )
 
     response = UserLoginResponse(
         first_name=user.first_name,
@@ -191,6 +193,7 @@ def link_google_account_service(
 
     current_user.google_subject = google_subject
     current_user.is_verified = True
+    current_user.token_version += 1
 
     try:
         db.commit()
@@ -207,8 +210,14 @@ def link_google_account_service(
             status_code=500, detail="An error occurred while linking the Google account."
         ) from exc
 
+    new_access_token = create_access_token(
+        data={"sub": str(current_user.user_id), "tv": current_user.token_version}
+    )
+
     return GoogleLinkResponse(
-        success=True, message="Google account linked successfully."
+        success=True,
+        message="Google account linked successfully.",
+        access_token=new_access_token,
     )
 
 
@@ -223,7 +232,9 @@ def login_google_user(user_data: User) -> UserLoginResponse:
             status_code=403, detail="User account is inactive or not verified."
         )
 
-    access_token = create_access_token(data={"sub": str(user_data.user_id)})
+    access_token = create_access_token(
+        data={"sub": str(user_data.user_id), "tv": user_data.token_version}
+    )
 
     response = UserLoginResponse(
         first_name=user_data.first_name,

@@ -90,6 +90,7 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLinkResponse(BaseModel):
     success: bool
     message: str
+    access_token: str | None = None
 
 
 class EmailChangeRequest(BaseModel):

@@ -160,6 +160,13 @@ Optional static analysis tools may also be run when configured.
 * Protected routes redirect to login.
 * The application does not remain in a false authenticated state.
 
+### Session Revocation (`token_version`)
+
+* After a successful password reset (`/auth/reset-password`), a token issued before the reset returns `401` on the next protected request.
+* Linking a Google account (`/auth/google/link`) returns a fresh `access_token` in the response; the token used to *make* that request is no longer valid afterward, but the frontend swaps to the new one automatically and the user is not logged out.
+* Confirming an email change (`/users/me/email/confirm`) invalidates tokens issued before the confirmation.
+* A token issued before this feature shipped (no `tv` claim) still works normally against an unchanged `token_version` (defaults to `0` for all existing users).
+
 ---
 
 # Dashboard

@@ -90,6 +90,7 @@ def reset_password(token: str, new_password: str, db: Session) -> User:
 
     user = reset_token.user
     user.password_hash = hash_password(new_password)
+    user.token_version += 1
     reset_token.used_at = datetime.now(timezone.utc)
 
     db.query(PasswordResetToken).filter(

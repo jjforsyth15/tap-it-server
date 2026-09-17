@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Boolean, DateTime, func, Enum
+from sqlalchemy import String, Boolean, DateTime, Integer, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.enums import UserType
@@ -22,6 +22,7 @@ class User(Base):
     )
     is_verified: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
+    token_version: Mapped[int] = mapped_column(Integer(), nullable=False, default=0)
     user_type: Mapped[UserType] = mapped_column(
         Enum(UserType, values_callable=lambda enum: [e.value for e in enum]),
         nullable=False,
