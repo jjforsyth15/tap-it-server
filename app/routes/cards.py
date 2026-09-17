@@ -57,7 +57,12 @@ def get_user_cards(
 def get_public_card_info(card_code: str, db: Session = Depends(get_db)):
     card = validate_card_code_in_db(card_code, db)
 
-    return card
+    return PublicCardResponse(
+        card_code=card.card_code,
+        card_name=card.card_name,
+        card_status=card.card_status,
+        profile_id=card.profile_id if card.card_status == CardStatus.active else None,
+    )
 
 
 # Get card by card code - GET /cards/{card_code} - public route
