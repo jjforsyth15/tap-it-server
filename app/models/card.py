@@ -18,6 +18,12 @@ class Card(Base):
         ForeignKey("profiles.profile_id", ondelete="SET NULL"),
         nullable=True,
     )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     card_name: Mapped[str] = mapped_column(String(255), nullable=False)
     card_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     pointing_url: Mapped[str] = mapped_column(String(2048), nullable=False)
@@ -40,4 +46,5 @@ class Card(Base):
     )
 
     profile = relationship("Profile", back_populates="cards")
+    user = relationship("User", back_populates="cards")
     taps = relationship("CardTap", back_populates="card", cascade="all, delete-orphan")
