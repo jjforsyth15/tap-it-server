@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.profile import Profile, ProfileStatus
@@ -16,6 +16,7 @@ from app.core.dependencies import get_current_user
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from app.routes.validators import validate_profile_data, validate_profile_user
+from app.services.vcard import build_vcard, build_vcard_filename
 from app.core.rate_limiter import limiter
 
 
@@ -91,6 +92,30 @@ def get_public_profile(profile_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Profile not found")
 
     return profile
+
+
+# Get public profile as a downloadable vCard - GET /profiles/public/{profile_id}/vcard - public route
+@router.get("/public/{profile_id}/vcard")
+def get_public_profile_vcard(profile_id: UUID, db: Session = Depends(get_db)):
+    profile = (
+        db.query(Profile)
+        .filter(
+            Profile.profile_id == profile_id,
+            Profile.profile_status == ProfileStatus.active,
+        )
+        .first()
+    )
+
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return Response(
+        content=build_vcard(profile),
+        media_type="text/vcard",
+        headers={
+            "Content-Disposition": f'attachment; filename="{build_vcard_filename(profile)}"'
+        },
+    )
 
 
 # Reorder profiles - PATCH /profiles/reorder - protected route
