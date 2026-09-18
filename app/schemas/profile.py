@@ -24,6 +24,7 @@ class ProfileResponse(BaseModel):
     organization: str | None = None
     profile_status: ProfileStatus
     profile_image_url: str | None = None
+    resume_url: str | None = None
     display_order: int
     link_count: int = 0
     card_count: int = 0
@@ -82,6 +83,7 @@ class PublicProfileResponse(BaseModel):
     organization: str | None = None
     profile_status: ProfileStatus
     profile_image_url: str | None = None
+    has_resume: bool = False
     links: list[PublicProfileLinkResponse] = Field(default_factory=list)
     contact_info: list[PublicProfileContactResponse] = Field(default_factory=list)
 

@@ -15,6 +15,7 @@ from app.routes import users
 from app.routes import analytics
 from app.routes import profile_links
 from app.routes import profile_contacts
+from app.routes import profile_resumes
 from app.routes.admin import admin_dashboard
 import logging
 import time
@@ -150,6 +151,7 @@ app.include_router(profiles.router)
 app.include_router(analytics.router)
 app.include_router(profile_links.router)
 app.include_router(profile_contacts.router)
+app.include_router(profile_resumes.router)
 app.include_router(users.router)
 app.include_router(profile_images.router)
 app.include_router(beta.router)

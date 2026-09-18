@@ -28,6 +28,7 @@ class Profile(Base):
         default=ProfileStatus.active,
     )
     profile_image_url: Mapped[str | None] = mapped_column(String(), nullable=True)
+    resume_url: Mapped[str | None] = mapped_column(String(), nullable=True)
     display_order: Mapped[int] = mapped_column(Integer(), nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -38,6 +39,10 @@ class Profile(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    @property
+    def has_resume(self) -> bool:
+        return self.resume_url is not None
 
     user = relationship("User", back_populates="profiles")
     cards = relationship("Card", back_populates="profile")

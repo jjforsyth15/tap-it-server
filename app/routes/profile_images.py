@@ -30,7 +30,9 @@ async def upload_profile_avatar(
             detail="Invalid file type. Only JPEG, PNG, JPG, and WEBP are allowed.",
         )
 
-    file_bytes = await file.read()
+    # read one byte past the cap so an oversized upload is caught without
+    # ever buffering the full file into memory
+    file_bytes = await file.read(MAX_AVATAR_SIZE_BYTES + 1)
 
     if len(file_bytes) > MAX_AVATAR_SIZE_BYTES:
         raise HTTPException(
