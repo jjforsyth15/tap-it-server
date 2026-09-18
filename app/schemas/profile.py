@@ -9,6 +9,8 @@ from app.models.enums import ContactType
 class ProfileCreate(BaseModel):
     profile_name: str
     bio: str | None = None
+    subtitle: str | None = Field(default=None, max_length=100)
+    organization: str | None = Field(default=None, max_length=100)
     profile_status: ProfileStatus = ProfileStatus.active
     profile_image_url: str | None = None
 
@@ -18,6 +20,8 @@ class ProfileResponse(BaseModel):
     user_id: UUID
     profile_name: str
     bio: str | None = None
+    subtitle: str | None = None
+    organization: str | None = None
     profile_status: ProfileStatus
     profile_image_url: str | None = None
     display_order: int
@@ -38,6 +42,8 @@ class ProfileCreateResponse(BaseModel):
 class ProfileUpdate(BaseModel):
     profile_name: str | None = None
     bio: str | None = None
+    subtitle: str | None = Field(default=None, max_length=100)
+    organization: str | None = Field(default=None, max_length=100)
     profile_status: ProfileStatus | None = None
     profile_image_url: str | None = None
 
@@ -72,6 +78,8 @@ class PublicProfileResponse(BaseModel):
     profile_id: UUID
     profile_name: str
     bio: str | None = None
+    subtitle: str | None = None
+    organization: str | None = None
     profile_status: ProfileStatus
     profile_image_url: str | None = None
     links: list[PublicProfileLinkResponse] = Field(default_factory=list)

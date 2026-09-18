@@ -40,6 +40,8 @@ def create_profile(
         user_id=current_user.user_id,
         profile_name=profile_data.profile_name,
         bio=profile_data.bio,
+        subtitle=profile_data.subtitle,
+        organization=profile_data.organization,
         profile_status=profile_data.profile_status,
         profile_image_url=profile_data.profile_image_url,
     )

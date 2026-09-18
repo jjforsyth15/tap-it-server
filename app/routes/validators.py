@@ -48,6 +48,12 @@ def validate_profile_data(profile_data: ProfileCreate):
     if profile_data.bio and len(profile_data.bio) > 500:
         errors.append("Bio must be 500 characters or less")
 
+    if profile_data.subtitle and len(profile_data.subtitle) > 100:
+        errors.append("Subtitle must be 100 characters or less")
+
+    if profile_data.organization and len(profile_data.organization) > 100:
+        errors.append("Organization must be 100 characters or less")
+
     return errors
 
 

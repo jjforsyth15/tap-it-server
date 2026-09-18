@@ -20,6 +20,8 @@ class Profile(Base):
     )
     profile_name: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str] = mapped_column(Text(), nullable=True)
+    subtitle: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    organization: Mapped[str | None] = mapped_column(String(100), nullable=True)
     profile_status: Mapped[ProfileStatus] = mapped_column(
         Enum(ProfileStatus, name="profile_status"),
         nullable=False,
