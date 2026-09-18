@@ -9,6 +9,8 @@ from app.core.rate_limiter import limiter
 
 router = APIRouter(prefix="/profile_images", tags=["Profile Images"])
 
+MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
+
 
 # Upload profile avatar - POST /profiles/{profile_id}/avatar - protected route
 @router.post("/{profile_id}/avatar")
@@ -29,6 +31,12 @@ async def upload_profile_avatar(
         )
 
     file_bytes = await file.read()
+
+    if len(file_bytes) > MAX_AVATAR_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail="File too large. Avatars must be 5MB or smaller.",
+        )
 
     extension_map = {
         "image/jpeg": "jpg",
