@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.models.profile import ProfileStatus
+from app.models.enums import ContactType
 
 
 class ProfileCreate(BaseModel):
@@ -57,6 +58,16 @@ class PublicProfileLinkResponse(BaseModel):
         from_attributes = True
 
 
+class PublicProfileContactResponse(BaseModel):
+    contact_type: ContactType
+    label: str | None = None
+    value: str
+    is_primary: bool
+
+    class Config:
+        from_attributes = True
+
+
 class PublicProfileResponse(BaseModel):
     profile_id: UUID
     profile_name: str
@@ -64,6 +75,7 @@ class PublicProfileResponse(BaseModel):
     profile_status: ProfileStatus
     profile_image_url: str | None = None
     links: list[PublicProfileLinkResponse] = Field(default_factory=list)
+    contact_info: list[PublicProfileContactResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
