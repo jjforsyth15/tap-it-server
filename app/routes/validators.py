@@ -5,6 +5,7 @@ from app.models.card import Card
 from app.models.profile import Profile
 from uuid import UUID
 from app.models.profile_links import ProfileLink
+from app.models.profile_contact import ProfileContact
 from app.schemas.auth import UserRegister
 from app.schemas.card import CardCreate, CardStatusUpdate
 from app.schemas.profile import ProfileCreate
@@ -86,6 +87,20 @@ def validate_link_in_db(link_id: UUID, db: Session):
         raise HTTPException(status_code=404, detail="Profile link not found")
 
     return link
+
+
+# validate profile contact exists in database
+def validate_contact_in_db(contact_id: UUID, db: Session):
+    contact = (
+        db.query(ProfileContact)
+        .filter(ProfileContact.contact_id == contact_id)
+        .first()
+    )
+
+    if not contact:
+        raise HTTPException(status_code=404, detail="Profile contact not found")
+
+    return contact
 
 
 # validate card exists in database
