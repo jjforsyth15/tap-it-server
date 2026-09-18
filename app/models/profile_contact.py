@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, DateTime, func, Integer, Boolean, Enum
+from sqlalchemy import String, ForeignKey, DateTime, func, Integer, Boolean, Enum, Index, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.enums import ContactType
@@ -10,6 +10,18 @@ from app.db.base import Base
 
 class ProfileContact(Base):
     __tablename__ = "profile_contacts"
+    __table_args__ = (
+        # enforces "at most one primary per (profile, contact_type)" at the
+        # database level -- the service layer's check-then-act logic can't
+        # guarantee this alone under concurrent requests
+        Index(
+            "ix_profile_contacts_single_primary",
+            "profile_id",
+            "contact_type",
+            unique=True,
+            postgresql_where=text("is_primary"),
+        ),
+    )
 
     contact_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
