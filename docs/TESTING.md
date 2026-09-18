@@ -160,6 +160,13 @@ Optional static analysis tools may also be run when configured.
 * Protected routes redirect to login.
 * The application does not remain in a false authenticated state.
 
+### Session Revocation (`token_version`)
+
+* After a successful password reset (`/auth/reset-password`), a token issued before the reset returns `401` on the next protected request.
+* Linking a Google account (`/auth/google/link`) returns a fresh `access_token` in the response; the token used to *make* that request is no longer valid afterward, but the frontend swaps to the new one automatically and the user is not logged out.
+* Confirming an email change (`/users/me/email/confirm`) invalidates tokens issued before the confirmation.
+* A token issued before this feature shipped (no `tv` claim) still works normally against an unchanged `token_version` (defaults to `0` for all existing users).
+
 ---
 
 # Dashboard
@@ -425,6 +432,8 @@ Rate-limited endpoints should be tested to confirm:
 * The response is valid JSON.
 * The application handles the response gracefully.
 * Legitimate users are not blocked during ordinary use.
+* In production, a caller-supplied `X-Forwarded-For` value does not change the rate-limit key.
+* Requests from two different real networks receive independent rate-limit buckets.
 
 Current rate-limited operations may include:
 
@@ -467,6 +476,11 @@ Review backend logs and confirm requests include useful diagnostic data such as:
 * Client IP
 * User agent
 * Referrer where available
+
+In production, confirm the logged client IP matches Cloudflare's protected connecting-IP value and cannot be changed by
+supplying a custom `X-Forwarded-For` header. TapIt's `tapit.requests` logger is the authoritative request log; Uvicorn's
+access logger is disabled because Render's default wildcard forwarded-header trust makes its client-address field
+caller-controlled.
 
 For unexpected server errors, confirm logs include enough context to investigate the problem without exposing sensitive values.
 

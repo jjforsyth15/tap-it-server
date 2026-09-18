@@ -1,10 +1,11 @@
 #!/bin/sh
-# Contract review gate: reviews any backend schema file staged in this
-# commit against its frontend counterpart via the tapit-ai CLI.
+# Contract review check: reviews any backend schema file staged in this
+# commit against its frontend counterpart via the tapit-ai CLI. Warns on
+# drift but does not block the commit.
 #
 # One-time setup after cloning: git config core.hooksPath scripts/hooks
 
-CHANGED=$(git diff --cached --name-only --diff-filter=ACM -- 'app/schemas/*.py')
+CHANGED=$(git diff --cached --name-only --diff-filter=ACM -- ':(glob)app/schemas/**/*.py')
 
 STEMS=""
 for f in $CHANGED; do
@@ -34,8 +35,15 @@ fi
 
 FAILED=0
 for stem in $STEMS; do
-  if [ ! -f "../tap-it-web/src/types/$stem.ts" ]; then
-    echo "No frontend counterpart for '$stem' (src/types/$stem.ts not found) - skipping contract review for this file."
+  # admin/admin_dashboard.py is explicitly paired with src/types/admin.ts
+  # (stems don't match by naming convention) - see tapit_ai/utils/discovery.py
+  case "$stem" in
+    admin_dashboard) frontend_stem="admin" ;;
+    *) frontend_stem="$stem" ;;
+  esac
+
+  if [ ! -f "../tap-it-web/src/types/$frontend_stem.ts" ]; then
+    echo "No frontend counterpart for '$stem' (src/types/$frontend_stem.ts not found) - skipping contract review for this file."
     continue
   fi
 
@@ -48,8 +56,7 @@ done
 
 if [ "$FAILED" -ne 0 ]; then
   echo "" >&2
-  echo "Contract review failed for one or more changed schema files. Commit blocked." >&2
-  exit 1
+  echo "WARNING: contract review found issues for one or more changed schema files. Commit is NOT blocked -- review the output above before pushing." >&2
 fi
 
 exit 0

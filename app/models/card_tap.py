@@ -4,26 +4,22 @@ from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base 
+from app.db.base import Base
 
 
 class CardTap(Base):
     __tablename__ = "card_taps"
-    
-    tap_id: Mapped[uuid.UUID]  = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4
+
+    tap_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     card_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("cards.card_id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    
+
     card = relationship("Card", back_populates="taps")

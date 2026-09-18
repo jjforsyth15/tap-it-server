@@ -9,6 +9,9 @@ from app.core.rate_limiter import limiter
 
 router = APIRouter(prefix="/profile_images", tags=["Profile Images"])
 
+MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
+
+
 # Upload profile avatar - POST /profiles/{profile_id}/avatar - protected route
 @router.post("/{profile_id}/avatar")
 @limiter.limit("5/hour")
@@ -17,35 +20,44 @@ async def upload_profile_avatar(
     profile_id: UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user= Depends(get_current_user)
+    current_user=Depends(get_current_user),
 ):
     profile = validate_profile_user(profile_id, current_user, db)
-    
+
     if file.content_type not in ["image/jpeg", "image/png", "image/jpg", "image/webp"]:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, JPG, and WEBP are allowed.")
-    
-    file_bytes = await file.read()
-    
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Only JPEG, PNG, JPG, and WEBP are allowed.",
+        )
+
+    # read one byte past the cap so an oversized upload is caught without
+    # ever buffering the full file into memory
+    file_bytes = await file.read(MAX_AVATAR_SIZE_BYTES + 1)
+
+    if len(file_bytes) > MAX_AVATAR_SIZE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail="File too large. Avatars must be 5MB or smaller.",
+        )
+
     extension_map = {
         "image/jpeg": "jpg",
         "image/png": "png",
         "image/jpg": "jpg",
         "image/webp": "webp",
     }
-    
+
     extension = extension_map.get(file.content_type)
-    
+
     if not extension:
         raise HTTPException(status_code=400, detail="Unsupported file type.")
-    
+
     path = f"profiles/{profile_id}/avatar.{extension}"
-    
+
     public_url = upload_avatar(
-        file_bytes=file_bytes,
-        path=path,
-        content_type=file.content_type
+        file_bytes=file_bytes, path=path, content_type=file.content_type
     )
-    
+
     profile.profile_image_url = public_url
     try:
         db.commit()
@@ -53,34 +65,29 @@ async def upload_profile_avatar(
     except Exception:
         db.rollback()
         raise
-    
-    return {
-        "message": "Profile avatar uploaded successfully",
-        "profile": profile
-    }
-    
+
+    return {"message": "Profile avatar uploaded successfully", "profile": profile}
+
+
 # Delete profile avatar - DELETE /profiles/{profile_id}/avatar - protected route
 @router.delete("/{profile_id}/avatar")
 def delete_profile_avatar(
     profile_id: UUID,
     db: Session = Depends(get_db),
-    current_user= Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     profile = validate_profile_user(profile_id, current_user, db)
-    
+
     if not profile.profile_image_url:
         raise HTTPException(status_code=400, detail="No avatar to delete.")
-    
+
     profile.profile_image_url = None
-    
+
     try:
         db.commit()
         db.refresh(profile)
     except Exception:
         db.rollback()
         raise
-    
-    return {
-        "message": "Profile avatar deleted successfully",
-        "profile": profile
-    }
+
+    return {"message": "Profile avatar deleted successfully", "profile": profile}
