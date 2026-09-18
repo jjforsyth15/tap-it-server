@@ -32,3 +32,8 @@ class FeedbackStatus(enum.Enum):
     open = "open"
     in_progress = "in_progress"
     resolved = "resolved"
+
+
+class ContactType(str, enum.Enum):
+    phone = "phone"
+    email = "email"

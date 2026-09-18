@@ -45,3 +45,9 @@ class Profile(Base):
         cascade="all, delete-orphan",
         order_by="ProfileLink.display_order.asc()",
     )
+    contact_info = relationship(
+        "ProfileContact",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+        order_by="ProfileContact.display_order.asc()",
+    )
