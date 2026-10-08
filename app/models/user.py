@@ -20,6 +20,9 @@ class User(Base):
     google_subject: Mapped[str | None] = mapped_column(
         String(255), unique=True, nullable=True
     )
+    supabase_auth_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), unique=True, nullable=True
+    )
     is_verified: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     token_version: Mapped[int] = mapped_column(Integer(), nullable=False, default=0)
