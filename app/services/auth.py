@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from typing import Any
 from fastapi.security import OAuth2PasswordRequestForm
 from google.auth.transport import requests as google_requests
@@ -194,6 +195,7 @@ def link_google_account_service(
     current_user.google_subject = google_subject
     current_user.is_verified = True
     current_user.token_version += 1
+    current_user.token_version_updated_at = datetime.now(timezone.utc)
 
     try:
         db.commit()

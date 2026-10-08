@@ -200,6 +200,7 @@ def confirm_email_change(token: str, db: Session) -> tuple[User, str]:
     old_email = user.email
     user.email = change_token.new_email
     user.token_version += 1
+    user.token_version_updated_at = datetime.now(timezone.utc)
     change_token.used_at = datetime.now(timezone.utc)
 
     db.query(EmailChangeToken).filter(

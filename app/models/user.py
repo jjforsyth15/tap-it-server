@@ -26,6 +26,10 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True)
     token_version: Mapped[int] = mapped_column(Integer(), nullable=False, default=0)
+    # Supabase-auth equivalent of the tv check -- see vault Decisions.
+    token_version_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     user_type: Mapped[UserType] = mapped_column(
         Enum(UserType, values_callable=lambda enum: [e.value for e in enum]),
         nullable=False,
